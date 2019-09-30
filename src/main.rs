@@ -36,6 +36,11 @@ mod git;
 
 
 fn main() {
+    println!("Program started!");
+    println!("Finding directories in resources folder:");
+    for x in WalkDir::new(get_resource("")).into_iter().filter_map(Result::ok) {
+        println!("File: {:?}", x.into_path());
+    }
 //    let repository = Repository::open(get_resource("Fudge"))
 //        .expect("Could not open yarn repository");
 
