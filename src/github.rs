@@ -3,6 +3,8 @@ use crate::pr_response::CreatePullRequestResponse;
 use serde::Serialize;
 use serde::Deserialize;
 use git2::Repository;
+use crate::util::{get_resource, ReadContentsExt};
+use std::fs::File;
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 struct PullRequest {
@@ -14,6 +16,7 @@ struct PullRequest {
 
 const HEAD_OWNER: &str = "natanfudge";
 const TARGET_VERSION: &str = "19w04b";
+const GITHUB_API_KEY: &str = "github_api_key.txt";
 
 pub fn send_pr(branch: &str, title: &str, body: &str) {
     let client = reqwest::Client::new();
@@ -24,7 +27,8 @@ pub fn send_pr(branch: &str, title: &str, body: &str) {
         base: TARGET_VERSION.to_string(),
     };
     let res_result = client.post("https://api.github.com/repos/shedaniel/yarn/pulls")
-        .header("Authorization", fs!("token {}",env!("GRANDMA_GITHUB_API")))
+        .header("Authorization", fs!("token {}",File::open(get_resource("GITHUB_API_KEY"))
+        .expect("Could not find github api key").read_contents() ))
         .body(serde_json::to_string(&request).unwrap()).send();
 
 
@@ -51,6 +55,6 @@ pub fn send_pr(branch: &str, title: &str, body: &str) {
 //
 //impl GrandmaRepo for Repository {
 //    pub fn switch_branch(new_branch: &str) {
-//        
+//
 //    }
 //}

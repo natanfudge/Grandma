@@ -140,8 +140,9 @@ Prefix the **original** class name with its enclosing package name followed by a
                 channel_id.send(fs!("Could not delete old mappings file at {:?}",old_path), ctx);
             }
 
-            let author_name = fs!("{}{}",author.name,author.discriminator);
-            let user_repo = YarnRepo::get_or_clone_yarn(get_resource(author_name));
+
+            let author_name = format!("{}{}",author.name,author.discriminator);
+            let user_repo = YarnRepo::get_or_clone_yarn(get_resource(author_name.as_str()));
 
             class_mapping.write(file);
         } else {

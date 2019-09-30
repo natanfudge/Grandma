@@ -3,3 +3,4 @@
 resources/main/yarn
 resources/test/test_repo/
 .idea/
+resources/main/github_api_key.txt
