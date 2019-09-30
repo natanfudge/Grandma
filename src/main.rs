@@ -38,7 +38,7 @@ mod git;
 fn main() {
     println!("Program started!");
     println!("Cloning yarn...");
-    let new_repo = YarnRepo::get_or_clone_yarn(get_resource("test_repo"));
+//    let new_repo = YarnRepo::get_or_clone_yarn(get_resource("test_repo"));
 
     println!("Finding directories in resources folder:");
     for x in WalkDir::new(get_resource("")).into_iter().filter_map(Result::ok) {
