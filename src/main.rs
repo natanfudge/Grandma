@@ -31,7 +31,7 @@ mod pr_response;
 mod github;
 mod git;
 
-
+//TODO: point procfile to release dir instead of debug one
 
 
 fn main() {
