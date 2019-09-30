@@ -1,1 +1,1 @@
-web: ./target/debug/grandma.exe
+web: ./target/release/grandma
