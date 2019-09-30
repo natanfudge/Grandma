@@ -5,6 +5,12 @@ use serenity::{
 };
 use serenity::model::id::ChannelId;
 use crate::mappings::ClassMapping;
+use crate::util::{VecExt, get_resource};
+use std::fs::{File, remove_file};
+use serenity::model::user::User;
+use git2::Repository;
+use crate::git::YarnRepo;
+use crate::MAPPINGS_DIR;
 
 
 pub struct Handler;
@@ -54,38 +60,11 @@ impl EventHandler for Handler {
             if words.len() < 4 || words[2] != "to" {
                 msg.channel_id.send("Incorrect syntax. Use: 'rename <class> to <new_name>'", &ctx);
             } else {
-                let mut data = ctx.data.write();
-                let mappings = data.get_mut::<Mappings>().unwrap();
-                let old_name_input = words[1];
-                let new_name = words[3];
-                let mut matching_mappings = if old_name_input.contains('/') {
-                    mappings.iter_mut()
-                        .filter(|class| class.name_deobf.ends_with(old_name_input))
-                        .collect::<Vec<&mut ClassMapping>>()
-                } else {
-                    mappings.iter_mut()
-                        .filter(|class: &&mut ClassMapping| class.deobf_class_name() == old_name_input)
-                        .collect::<Vec<&mut ClassMapping>>()
-                };
-
-                if matching_mappings.is_empty() {
-                    msg.channel_id.send_boxed(f!("No class named '{}'.",old_name_input), &ctx)
-                } else if matching_mappings.len() == 1 {
-                    let class_mapping = &mut matching_mappings[0];
-                    let old_name = class_mapping.name_deobf.clone();
-                    class_mapping.name_deobf = f!("{}/{}",class_mapping.deobf_package_name(), new_name);
-                    msg.channel_id.send_boxed(f!("Renamed {} to {}.", old_name,class_mapping.name_deobf), &ctx)
-                } else {
-                    //TODO: have standard list function shit
-                    let matching_class_names = matching_mappings.iter()
-                        .map(|class| class.name_deobf.clone())
-                        .collect::<Vec<String>>()
-                        .join("\n");
-                    msg.channel_id.send_boxed(f!("There are multiple classes with this name: {}\n. \
-Prefix your class name with its enclosing package name followed by a '/'.",
-                     matching_class_names
-                    ), &ctx)
+                if words.len() > 4 {
+                    msg.channel_id.send("Ignoring the bit at the end there, you only need 4 words.", &ctx);
                 }
+
+                Handler::try_rename(&ctx, msg.channel_id, words[1], words[3], &msg.author);
             }
         }
     }
@@ -109,7 +88,7 @@ pub fn start_bot(mappings: Vec<ClassMapping>) {
 // Create a new instance of the Client, logging in as a bot. This will
 // automatically prepend your bot token with "Bot ", which is a requirement
 // by Discord for bot users.
-    let mut client = Client::new(&token, Handler).expect("Err creating client");
+    let mut client = Client::new(&token, Handler).expect("Could not start bot");
 
     {
         let mut data = client.data.write();
@@ -122,5 +101,52 @@ pub fn start_bot(mappings: Vec<ClassMapping>) {
 // exponential backoff until it reconnects.
     if let Err(why) = client.start() {
         println!("Client error: {:?}", why);
+    }
+}
+
+impl Handler {
+    fn try_rename(ctx: &Context, channel_id: ChannelId, old_class_name: &str, new_class_name: &str, author: &User) {
+        let mut data = ctx.data.write();
+        let mappings = data.get_mut::<Mappings>().unwrap();
+        let mut matching_mappings = if old_class_name.contains('/') {
+            mappings.filter_mut(|class| class.name_deobf.ends_with(old_class_name))
+        } else {
+            mappings.filter_mut(|class: &&mut ClassMapping| class.deobf_class_name() == old_class_name)
+        };
+        if matching_mappings.is_empty() {
+            channel_id.send(fs!("No class named '{}'.",old_class_name), &ctx);
+        } else if matching_mappings.len() == 1 {
+            Handler::rename(ctx, channel_id, &mut matching_mappings[0],new_class_name, author)
+        } else {
+            let matching_class_names = matching_mappings
+                .map(|class| class.name_deobf.clone())
+                .join(",\n");
+            channel_id.send(fs!("There are multiple classes with this name: \n{}\n\
+Prefix the **original** class name with its enclosing package name followed by a '/'.",
+                     matching_class_names
+                    ), &ctx);
+        };
+    }
+
+    fn rename(ctx: &Context, channel_id: ChannelId, class_mapping : &mut ClassMapping, new_class_name : &str, author :&User) {
+        let old_name = class_mapping.name_deobf.clone();
+        class_mapping.name_deobf = f!("{}/{}",class_mapping.deobf_package_name(), new_class_name);
+        channel_id.send(fs!("Renamed {} to {}.", old_name,class_mapping.name_deobf), &ctx);
+        let path = get_resource(fs!("{}/{}.mapping", MAPPINGS_DIR, class_mapping.name_deobf));
+        if let Ok(file) = File::create(&path) {
+            // Remove old file
+            let old_path = get_resource(fs!("{}/{}.mapping", MAPPINGS_DIR, old_name));
+            if let Err(_error) = remove_file(&old_path) {
+                channel_id.send(fs!("Could not delete old mappings file at {:?}",old_path), ctx);
+            }
+
+            let author_name = fs!("{}{}",author.name,author.discriminator);
+            let user_repo = YarnRepo::get_or_clone_yarn(get_resource(author_name));
+
+            class_mapping.write(file);
+        } else {
+            channel_id.send(fs!("Could not save mappings to {:?}. Undoing changes.",path), ctx);
+            class_mapping.name_deobf = old_name;
+        }
     }
 }
