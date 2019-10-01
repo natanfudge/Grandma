@@ -1,3 +1,7 @@
+use crate::git::YarnRepo;
+use walkdir::{WalkDir, DirEntry};
+use std::fs::File;
+
 #[derive(Debug)]
 pub struct ClassMapping {
     pub name_obf: String,
@@ -40,3 +44,17 @@ pub struct FieldMapping { pub name_obf: String, pub name_deobf: String, pub desc
 
 #[derive(Debug)]
 pub struct ArgumentMapping { pub pos: i32, pub name: String }
+
+impl YarnRepo{
+    pub fn get_current_mappings() -> Vec<ClassMapping>{
+        WalkDir::new(YarnRepo::get_mappings_directory())
+            .into_iter()
+            .filter_map(Result::ok)
+            .filter(|file: &DirEntry| !file.file_type().is_dir())
+            .map(|file: DirEntry|
+                ClassMapping::parse(File::open(file.into_path()).expect("Could not open file"))
+            ).collect()
+    }
+
+
+}

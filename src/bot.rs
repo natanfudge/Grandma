@@ -9,7 +9,7 @@ use crate::util::{VecExt, get_resource};
 use std::fs::{File, remove_file};
 use serenity::model::user::User;
 use git2::Repository;
-use crate::git::YarnRepo;
+use crate::git::{YarnRepo, GitExt};
 use crate::MAPPINGS_DIR;
 
 
@@ -81,7 +81,7 @@ impl EventHandler for Handler {
 }
 
 
-pub fn start_bot(mappings: Vec<ClassMapping>) {
+pub fn start_bot() {
     let token = env::var("DISCORD_TOKEN")
         .expect("Expected a token in the environment");
 
@@ -90,10 +90,10 @@ pub fn start_bot(mappings: Vec<ClassMapping>) {
 // by Discord for bot users.
     let mut client = Client::new(&token, Handler).expect("Could not start bot");
 
-    {
-        let mut data = client.data.write();
-        data.insert::<Mappings>(mappings);
-    }
+//    {
+//        let mut data = client.data.write();
+//        data.insert::<Mappings>(mappings);
+//    }
 
 // Finally, start a single shard, and start listening to events.
 //
@@ -106,8 +106,18 @@ pub fn start_bot(mappings: Vec<ClassMapping>) {
 
 impl Handler {
     fn try_rename(ctx: &Context, channel_id: ChannelId, old_class_name: &str, new_class_name: &str, author: &User) {
-        let mut data = ctx.data.write();
-        let mappings = data.get_mut::<Mappings>().unwrap();
+
+        let repo = YarnRepo::get_git();
+        let branch_name = f!("{}{}",author.name,author.discriminator);
+        let branch_name = branch_name.as_str();
+        println!("Switching to branch '{}'",branch_name);
+        repo.create_branch_if_missing(branch_name);
+        repo.switch_to_branch(branch_name);
+        println!("Parsing mappings");
+        let mut mappings = YarnRepo::get_current_mappings();
+
+//        let mut data = ctx.data.write();
+//        let mappings = data.get_mut::<Mappings>().unwrap();
         let mut matching_mappings = if old_class_name.contains('/') {
             mappings.filter_mut(|class| class.name_deobf.ends_with(old_class_name))
         } else {
@@ -116,7 +126,7 @@ impl Handler {
         if matching_mappings.is_empty() {
             channel_id.send(fs!("No class named '{}'.",old_class_name), &ctx);
         } else if matching_mappings.len() == 1 {
-            Handler::rename(ctx, channel_id, &mut matching_mappings[0],new_class_name, author)
+            Handler::rename(ctx, channel_id, &mut matching_mappings[0],new_class_name, author,&repo)
         } else {
             let matching_class_names = matching_mappings
                 .map(|class| class.name_deobf.clone())
@@ -128,25 +138,29 @@ Prefix the **original** class name with its enclosing package name followed by a
         };
     }
 
-    fn rename(ctx: &Context, channel_id: ChannelId, class_mapping : &mut ClassMapping, new_class_name : &str, author :&User) {
+    fn rename(ctx: &Context, channel_id: ChannelId, class_mapping : &mut ClassMapping, new_class_name : &str,
+              author :&User, repo : &Repository) {
         let old_name = class_mapping.name_deobf.clone();
         class_mapping.name_deobf = f!("{}/{}",class_mapping.deobf_package_name(), new_class_name);
-        channel_id.send(fs!("Renamed {} to {}.", old_name,class_mapping.name_deobf), &ctx);
+
         let path = get_resource(fs!("{}/{}.mapping", MAPPINGS_DIR, class_mapping.name_deobf));
-        if let Ok(file) = File::create(&path) {
+        if let Ok(new_mappings_file) = File::create(&path) {
             // Remove old file
             let old_path = get_resource(fs!("{}/{}.mapping", MAPPINGS_DIR, old_name));
             if let Err(_error) = remove_file(&old_path) {
                 channel_id.send(fs!("Could not delete old mappings file at {:?}",old_path), ctx);
             }
 
+            channel_id.send(fs!("Renamed {} to {}.", old_name,class_mapping.name_deobf), &ctx);
+            class_mapping.write(new_mappings_file);
 
-            let author_name = format!("{}{}",author.name,author.discriminator);
-            let user_repo = YarnRepo::get_or_clone_yarn(get_resource(author_name.as_str()));
+            //TODO commit
+//            repo.commit();
 
-            class_mapping.write(file);
+
+
         } else {
-            channel_id.send(fs!("Could not save mappings to {:?}. Undoing changes.",path), ctx);
+            channel_id.send(fs!("Could not save mappings to {:?}.",path), ctx);
             class_mapping.name_deobf = old_name;
         }
     }

@@ -1,7 +1,7 @@
-/target
-**/*.rs.bk
-resources/main/yarn
-resources/test/test_repo/
-.idea/
-resources/main/github_api_key.txt
-.idea
+*
+!.gitignore
+!src
+!Cargo.lock
+!Cargo.toml
+!LICENSE
+!Procfile
