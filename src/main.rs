@@ -4,7 +4,7 @@ use crate::mappings::ClassMapping;
 use crate::util::{get_test_resource, get_resource, VecExt, ReadContentsExt};
 use std::fs::{read_dir, File};
 use walkdir::{WalkDir, DirEntry};
-use git2::{Repository, Oid, Tree, Commit, Index, Signature};
+use git2::{Repository, Oid, Tree, Commit, Index, Signature, Direction, PushOptions, ProxyOptions, RemoteCallbacks, Cred};
 use git2::build::CheckoutBuilder;
 use crate::git::{GitExt, YarnRepo};
 use std::path::{PathBuf, Path};
@@ -22,13 +22,14 @@ mod foo {
         ($($arg:tt)*) => (format!($($arg)*).as_str())
     }
 
-    macro_rules! concat{
+    macro_rules! concat {
         ($part1:expr,$part2:expr) => (fs!("{}{}",$part1,$part2))
     }
 }
 
 const MAPPINGS_DIR: &str = "yarn/mappings";
 const MAPPING_GIT_ROOT: &str = "yarn";
+
 mod util;
 mod bot;
 mod parse;
@@ -70,36 +71,84 @@ mod git;
 //    - Whenever a change is made, the bot will check if it conflicts with any branches that have recent changes (a week or so)
 
 
+//TODO: test that branches are preserved between different deploys (deletions of the repo)
 
-fn main() {
+fn create_callbacks<'a>() -> RemoteCallbacks<'a>{
+    let mut callbacks = RemoteCallbacks::new();
+    &callbacks.credentials(|str, str_opt, cred_type| {
+        println!("They want to get cred. str = {}, str_opt = {:?}, cred_type = {:?}", str,str_opt,cred_type);
+        Cred::userpass_plaintext("natanfudge",env!("GITHUB_PASSWORD"))
+    });
+    callbacks
+}
+
+fn main() -> Result<(), git2::Error> {
     println!("Program started!");
     println!("Cloning yarn...");
     let repo = YarnRepo::clone_yarn();
 
+    repo.stage_changes(&Path::new("mappings/ajx.mapping"));
+    repo.commit_changes("natanfudge", "natan.lifsiz@gmail.com", "Autocommit");
+
+
+    let mut remote = repo.find_remote("origin").unwrap();
+
+//    let mut callbacks = RemoteCallbacks::new();
+//    &callbacks.credentials(|str, str_opt, cred_type| {
+//        println!("They want to get cred. str = {}, str_opt = {:?}, cred_type = {:?}", str,str_opt,cred_type);
+//        Cred::userpass_plaintext("natanfudge",env!("GITHUB_PASSWORD"))
+//
+////        Ok(Cred::ssh_key_from_agent("natanfudge").expect("Could not get ssh key from ssh agent"))
+////        Ok(Cred::userpass_plaintext("natanfudge", env!("GITHUB_PASSWORD")).unwrap())
+//    });
+
+
+//    callbacks.
+
+//    callbacks.
+
+    remote.connect_auth(Direction::Push, Some(create_callbacks()), None).unwrap();
+    repo.remote_add_push("origin", "refs/heads/19w04b").unwrap();
+    let mut push_options = PushOptions::default();
+    let mut callbacks = create_callbacks();
+    callbacks.push_update_reference(|str,str_opt|{
+        println!("str = {}, str_opt = {:?}", str, str_opt);
+       Ok(())
+    });
+    push_options.remote_callbacks(callbacks);
+
+
+    remote.push(&[], Some(&mut push_options)).unwrap();
+
+    std::mem::drop(remote);
+
+
+    Ok(())
+
+
 //    repo.add
-
-    let mut index = repo.index().expect("Could not find git index");
-
-//    index.add_path(
-//        &Path::new(
-//            "mappings\\net\\minecraft\\class_4516.mapping"))
-//        .expect("Could not add file to git");
-
-
-    let tree = repo.find_tree(index.write_tree().unwrap()).unwrap();
-    let parent = repo.get_head_commit();
-
-    let signature = Signature::now("natanfudge","natan.lifsiz@gmail.com").unwrap();
-
-    let commit_id = repo.commit(
-        Some("HEAD"),
-        &signature,
-        &signature,
-        "X -> Y",
-        &tree,
-        &[&parent]
-    ).expect("Could not commit changes");
-
+//
+//    let mut index = repo.index().expect("Could not find git index");
+//
+//    // index.add
+//    let path = Path::new("mappings/net/minecraft/class_4516.mapping");
+//    index.add_path(&path).expect("Could not add file to git");
+//    index.write().expect("Could not write index changes to disk");
+//
+//
+//     let tree = repo.find_tree(index.write_tree().unwrap()).unwrap();
+//     let parent = repo.get_head_commit();
+//
+//     let signature = Signature::now("natanfudge","natan.lifsiz@gmail.com").unwrap();
+//
+//     let commit_id = repo.commit(
+//         Some("HEAD"),
+//         &signature,
+//         &signature,
+//         "X -> Y",
+//         &tree,
+//         &[&parent]
+//     ).expect("Could not commit changes");
 
 
 //
