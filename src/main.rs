@@ -87,8 +87,8 @@ fn main() -> Result<(), git2::Error> {
     println!("Cloning yarn...");
     let repo = YarnRepo::clone_yarn();
 
-    repo.stage_changes(&Path::new("mappings/ajx.mapping"));
-    repo.commit_changes("natanfudge", "natan.lifsiz@gmail.com", "Autocommit");
+//    repo.stage_changes(&Path::new("mappings/ajx.mapping"));
+//    repo.commit_changes("natanfudge", "natan.lifsiz@gmail.com", "Autocommit");
 
 
     let mut remote = repo.find_remote("origin").unwrap();
@@ -108,7 +108,7 @@ fn main() -> Result<(), git2::Error> {
 //    callbacks.
 
     remote.connect_auth(Direction::Push, Some(create_callbacks()), None).unwrap();
-    repo.remote_add_push("origin", "refs/heads/19w04b").unwrap();
+    repo.remote_add_push("origin", "refs/heads/19w04b:refs/heads/19w04b").unwrap();
     let mut push_options = PushOptions::default();
     let mut callbacks = create_callbacks();
     callbacks.push_update_reference(|str,str_opt|{
@@ -118,7 +118,7 @@ fn main() -> Result<(), git2::Error> {
     push_options.remote_callbacks(callbacks);
 
 
-    remote.push(&[], Some(&mut push_options)).unwrap();
+    remote.push(&["refs/heads/19w04b:refs/heads/19w04b"], Some(&mut push_options)).unwrap();
 
     std::mem::drop(remote);
 
