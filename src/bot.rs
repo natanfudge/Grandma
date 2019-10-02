@@ -9,8 +9,8 @@ use crate::util::{VecExt, get_resource};
 use std::fs::{File, remove_file};
 use serenity::model::user::User;
 use git2::Repository;
-use crate::git::{YarnRepo, GitExt};
-use crate::MAPPINGS_DIR;
+use crate::git::{YarnRepo, GitExt, GIT_EMAIL, GIT_USER,YARN_MAPPINGS_DIR,RELATIVE_MAPPINGS_DIR};
+use std::path::Path;
 
 
 pub struct Handler;
@@ -105,11 +105,15 @@ pub fn start_bot() {
 }
 
 impl Handler {
+    fn user_branch(user : &User) -> String {
+        f!("{}{}",user.name,user.discriminator)
+    }
+
     fn try_rename(ctx: &Context, channel_id: ChannelId, old_class_name: &str, new_class_name: &str, author: &User) {
 
         let repo = YarnRepo::get_git();
-        let branch_name = f!("{}{}",author.name,author.discriminator);
-        let branch_name = branch_name.as_str();
+        let branch_name_str =Handler::user_branch(author);
+        let branch_name = branch_name_str.as_str();
         println!("Switching to branch '{}'",branch_name);
         repo.create_branch_if_missing(branch_name);
         repo.switch_to_branch(branch_name);
@@ -143,20 +147,28 @@ Prefix the **original** class name with its enclosing package name followed by a
         let old_name = class_mapping.name_deobf.clone();
         class_mapping.name_deobf = f!("{}/{}",class_mapping.deobf_package_name(), new_class_name);
 
-        let path = get_resource(fs!("{}/{}.mapping", MAPPINGS_DIR, class_mapping.name_deobf));
+        // This path is relative to the resources folder
+        let path = get_resource(fs!("{}/{}.mapping", YARN_MAPPINGS_DIR, class_mapping.name_deobf));
         if let Ok(new_mappings_file) = File::create(&path) {
             // Remove old file
-            let old_path = get_resource(fs!("{}/{}.mapping", MAPPINGS_DIR, old_name));
-            if let Err(_error) = remove_file(&old_path) {
+            let old_path = get_resource(fs!("{}/{}.mapping", YARN_MAPPINGS_DIR, old_name));
+            if let Err(_error) = repo.remove(&old_path) {
                 channel_id.send(fs!("Could not delete old mappings file at {:?}",old_path), ctx);
             }
 
-            channel_id.send(fs!("Renamed {} to {}.", old_name,class_mapping.name_deobf), &ctx);
+            channel_id.send(fs!("Renamed {} to {}.", old_name,class_mapping.name_deobf), ctx);
+
             class_mapping.write(new_mappings_file);
+            // This path is relative to the yarn repository
+            repo.stage_changes(&Path::new(fs!("{}/{}.mapping",RELATIVE_MAPPINGS_DIR, class_mapping.name_deobf)));
+            repo.commit_changes(GIT_USER, GIT_EMAIL, fs!("{} -> {}",old_name,class_mapping.name_deobf));
 
-            //TODO commit
-//            repo.commit();
-
+            let result = repo.push(Handler::user_branch(author).as_str());
+            if let Err(error) = result{
+                channel_id.send(fs!("There was a problem while pushing the changes to github: {:?}",error),ctx);
+            }else{
+                println!("Changes pushed to repository");
+            }
 
 
         } else {

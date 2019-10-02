@@ -10,6 +10,7 @@ use crate::git::{GitExt, YarnRepo};
 use std::path::{PathBuf, Path};
 use std::str::FromStr;
 use serenity::cache::FromStrAndCache;
+use crate::bot::start_bot;
 
 
 #[macro_use]
@@ -27,11 +28,8 @@ mod foo {
     }
 }
 
-const MAPPINGS_DIR: &str = "yarn/mappings";
-const MAPPING_GIT_ROOT: &str = "yarn";
 
 mod util;
-mod bot;
 mod parse;
 mod mappings;
 mod tests;
@@ -39,6 +37,7 @@ mod write;
 mod pr_response;
 mod github;
 mod git;
+mod bot;
 
 //TODO: plan:
 // - Maintain a singular git repository that exists in github.com at all times.
@@ -73,85 +72,17 @@ mod git;
 
 //TODO: test that branches are preserved between different deploys (deletions of the repo)
 
-fn create_callbacks<'a>() -> RemoteCallbacks<'a>{
-    let mut callbacks = RemoteCallbacks::new();
-    &callbacks.credentials(|str, str_opt, cred_type| {
-        println!("They want to get cred. str = {}, str_opt = {:?}, cred_type = {:?}", str,str_opt,cred_type);
-        Cred::userpass_plaintext("natanfudge",env!("GITHUB_PASSWORD"))
-    });
-    callbacks
-}
+
 
 fn main() -> Result<(), git2::Error> {
     println!("Program started!");
     println!("Cloning yarn...");
     let repo = YarnRepo::clone_yarn();
 
-//    repo.stage_changes(&Path::new("mappings/ajx.mapping"));
-//    repo.commit_changes("natanfudge", "natan.lifsiz@gmail.com", "Autocommit");
 
 
-    let mut remote = repo.find_remote("origin").unwrap();
-
-//    let mut callbacks = RemoteCallbacks::new();
-//    &callbacks.credentials(|str, str_opt, cred_type| {
-//        println!("They want to get cred. str = {}, str_opt = {:?}, cred_type = {:?}", str,str_opt,cred_type);
-//        Cred::userpass_plaintext("natanfudge",env!("GITHUB_PASSWORD"))
-//
-////        Ok(Cred::ssh_key_from_agent("natanfudge").expect("Could not get ssh key from ssh agent"))
-////        Ok(Cred::userpass_plaintext("natanfudge", env!("GITHUB_PASSWORD")).unwrap())
-//    });
-
-
-//    callbacks.
-
-//    callbacks.
-
-    remote.connect_auth(Direction::Push, Some(create_callbacks()), None).unwrap();
-    repo.remote_add_push("origin", "refs/heads/19w04b:refs/heads/19w04b").unwrap();
-    let mut push_options = PushOptions::default();
-    let mut callbacks = create_callbacks();
-    callbacks.push_update_reference(|str,str_opt|{
-        println!("str = {}, str_opt = {:?}", str, str_opt);
-       Ok(())
-    });
-    push_options.remote_callbacks(callbacks);
-
-
-    remote.push(&["refs/heads/19w04b:refs/heads/19w04b"], Some(&mut push_options)).unwrap();
-
-    std::mem::drop(remote);
-
+    println!("Starting bot");
+    start_bot();
 
     Ok(())
-
-
-//    repo.add
-//
-//    let mut index = repo.index().expect("Could not find git index");
-//
-//    // index.add
-//    let path = Path::new("mappings/net/minecraft/class_4516.mapping");
-//    index.add_path(&path).expect("Could not add file to git");
-//    index.write().expect("Could not write index changes to disk");
-//
-//
-//     let tree = repo.find_tree(index.write_tree().unwrap()).unwrap();
-//     let parent = repo.get_head_commit();
-//
-//     let signature = Signature::now("natanfudge","natan.lifsiz@gmail.com").unwrap();
-//
-//     let commit_id = repo.commit(
-//         Some("HEAD"),
-//         &signature,
-//         &signature,
-//         "X -> Y",
-//         &tree,
-//         &[&parent]
-//     ).expect("Could not commit changes");
-
-
-//
-//    println!("Starting bot...");
-//    bot::start_bot();
 }
