@@ -9,7 +9,7 @@ use crate::util::{VecExt, get_resource};
 use std::fs::{File, remove_file};
 use serenity::model::user::User;
 use git2::Repository;
-use crate::git::{YarnRepo, GitExt, GIT_EMAIL, GIT_USER,YARN_MAPPINGS_DIR,RELATIVE_MAPPINGS_DIR};
+use crate::git::{YarnRepo, GitExt, GIT_EMAIL, GIT_USER, YARN_MAPPINGS_DIR, RELATIVE_MAPPINGS_DIR};
 use std::path::Path;
 
 
@@ -105,16 +105,15 @@ pub fn start_bot() {
 }
 
 impl Handler {
-    fn user_branch(user : &User) -> String {
+    fn user_branch(user: &User) -> String {
         f!("{}{}",user.name,user.discriminator)
     }
 
     fn try_rename(ctx: &Context, channel_id: ChannelId, old_class_name: &str, new_class_name: &str, author: &User) {
-
         let repo = YarnRepo::get_git();
-        let branch_name_str =Handler::user_branch(author);
+        let branch_name_str = Handler::user_branch(author);
         let branch_name = branch_name_str.as_str();
-        println!("Switching to branch '{}'",branch_name);
+        println!("Switching to branch '{}'", branch_name);
         repo.create_branch_if_missing(branch_name);
         repo.switch_to_branch(branch_name);
         println!("Parsing mappings");
@@ -130,7 +129,7 @@ impl Handler {
         if matching_mappings.is_empty() {
             channel_id.send(fs!("No class named '{}'.",old_class_name), &ctx);
         } else if matching_mappings.len() == 1 {
-            Handler::rename(ctx, channel_id, &mut matching_mappings[0],new_class_name, author,&repo)
+            Handler::rename(ctx, channel_id, &mut matching_mappings[0], new_class_name, author, &repo)
         } else {
             let matching_class_names = matching_mappings
                 .map(|class| class.name_deobf.clone())
@@ -142,35 +141,35 @@ Prefix the **original** class name with its enclosing package name followed by a
         };
     }
 
-    fn rename(ctx: &Context, channel_id: ChannelId, class_mapping : &mut ClassMapping, new_class_name : &str,
-              author :&User, repo : &Repository) {
+    fn rename(ctx: &Context, channel_id: ChannelId, class_mapping: &mut ClassMapping, new_class_name: &str,
+              author: &User, repo: &Repository) {
         let old_name = class_mapping.name_deobf.clone();
         class_mapping.name_deobf = f!("{}/{}",class_mapping.deobf_package_name(), new_class_name);
 
-        // This path is relative to the resources folder
-        let path = get_resource(fs!("{}/{}.mapping", YARN_MAPPINGS_DIR, class_mapping.name_deobf));
+        let new_path = format!("{}/{}.mapping", RELATIVE_MAPPINGS_DIR, class_mapping.name_deobf);
+        let path = YarnRepo::get_path(new_path.as_str());
         if let Ok(new_mappings_file) = File::create(&path) {
             // Remove old file
-            let old_path = get_resource(fs!("{}/{}.mapping", YARN_MAPPINGS_DIR, old_name));
-            if let Err(_error) = repo.remove(&old_path) {
+            let old_path = format!("{}/{}.mapping",RELATIVE_MAPPINGS_DIR, old_name);
+            if let Err(_error) = remove_file(YarnRepo::get_path(old_path.as_str())) {
                 channel_id.send(fs!("Could not delete old mappings file at {:?}",old_path), ctx);
             }
+
+            //TODO: don't do this when the file name does not change.
+            repo.remove((old_path).as_ref());
 
             channel_id.send(fs!("Renamed {} to {}.", old_name,class_mapping.name_deobf), ctx);
 
             class_mapping.write(new_mappings_file);
-            // This path is relative to the yarn repository
-            repo.stage_changes(&Path::new(fs!("{}/{}.mapping",RELATIVE_MAPPINGS_DIR, class_mapping.name_deobf)));
+            repo.stage_changes(new_path.as_ref());
             repo.commit_changes(GIT_USER, GIT_EMAIL, fs!("{} -> {}",old_name,class_mapping.name_deobf));
 
             let result = repo.push(Handler::user_branch(author).as_str());
-            if let Err(error) = result{
-                channel_id.send(fs!("There was a problem while pushing the changes to github: {:?}",error),ctx);
-            }else{
+            if let Err(error) = result {
+                channel_id.send(fs!("There was a problem while pushing the changes to github: {:?}",error), ctx);
+            } else {
                 println!("Changes pushed to repository");
             }
-
-
         } else {
             channel_id.send(fs!("Could not save mappings to {:?}.",path), ctx);
             class_mapping.name_deobf = old_name;

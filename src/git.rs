@@ -19,7 +19,7 @@ pub trait GitExt {
     fn stage_changes(&self, changed_file: &Path);
     fn commit_changes(&self, author_name: &str, author_email: &str, message: &str) -> Oid;
     fn push(&self, branch: &str) -> Result<(), git2::Error>;
-    fn remove(&self, path :&Path) -> Result<(),git2::Error>;
+    fn remove(&self, path :&Path);
 }
 
 fn create_callbacks<'a>() -> RemoteCallbacks<'a> {
@@ -86,8 +86,10 @@ impl GitExt for Repository {
         Ok(())
     }
 
-    fn remove(&self, path :&Path) -> Result<(),git2::Error>{
-        self.index().unwrap().remove_path(path)
+    fn remove(&self, path :&Path){
+        let mut index = self.index().unwrap();
+        index.remove_path(path);
+        index.write();
     }
 }
 
@@ -115,5 +117,13 @@ impl YarnRepo {
 
     pub fn get_mappings_directory() -> PathBuf {
         get_resource(YARN_MAPPINGS_DIR)
+    }
+
+    pub fn get_path(relative_path : &str) -> PathBuf{
+        get_resource(LOCAL_YARN_REPO).join(relative_path)
+    }
+
+    pub fn get_path_from_mappings(relative_path : &str) -> PathBuf{
+        YarnRepo::get_mappings_directory().join(relative_path)
     }
 }

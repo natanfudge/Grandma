@@ -36,7 +36,6 @@ pub fn get_test_resource(name: &str) -> File {
 pub fn get_resource(name: &str) -> PathBuf {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     dir.join("resources").join("main").join(name)
-//    File::open(path).unwrap_or_else(|_| panic!("Could not find test resource {}", name))
 }
 
 pub trait ReadContentsExt {

@@ -2,7 +2,7 @@
 
 use crate::mappings::ClassMapping;
 use crate::util::{get_test_resource, get_resource, VecExt, ReadContentsExt};
-use std::fs::{read_dir, File};
+use std::fs::{read_dir, File, remove_file};
 use walkdir::{WalkDir, DirEntry};
 use git2::{Repository, Oid, Tree, Commit, Index, Signature, Direction, PushOptions, ProxyOptions, RemoteCallbacks, Cred};
 use git2::build::CheckoutBuilder;
@@ -78,8 +78,6 @@ fn main() -> Result<(), git2::Error> {
     println!("Program started!");
     println!("Cloning yarn...");
     let repo = YarnRepo::clone_yarn();
-
-
 
     println!("Starting bot");
     start_bot();
