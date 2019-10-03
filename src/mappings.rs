@@ -1,6 +1,8 @@
 use crate::git::YarnRepo;
 use walkdir::{WalkDir, DirEntry};
 use std::fs::File;
+use std::path::PathBuf;
+use std::str::FromStr;
 
 #[derive(Debug)]
 pub struct ClassMapping {
@@ -26,13 +28,21 @@ impl ClassMapping {
         let split: Vec<&str> = self.name_deobf.split('/').collect::<Vec<&str>>();
         *split.last().unwrap_or(&"")
     }
-    
-    pub fn deobf_package_name(&self) -> String{
+
+    pub fn deobf_package_name(&self) -> String {
         let split: Vec<&str> = self.name_deobf.split('/').collect::<Vec<&str>>();
         split[..split.len() - 1].join("/")
     }
-    
-    
+
+    pub fn path_in_mappings_dir(&self) -> PathBuf {
+        let name = if self.name_deobf != "" {
+            &self.name_deobf
+        } else {
+            &self.name_obf
+        };
+
+        PathBuf::from_str(fs!("mappings/{}.mapping",name)).unwrap()
+    }
 }
 
 
@@ -45,16 +55,3 @@ pub struct FieldMapping { pub name_obf: String, pub name_deobf: String, pub desc
 #[derive(Debug)]
 pub struct ArgumentMapping { pub pos: i32, pub name: String }
 
-impl YarnRepo{
-    pub fn get_current_mappings() -> Vec<ClassMapping>{
-        WalkDir::new(YarnRepo::get_mappings_directory())
-            .into_iter()
-            .filter_map(Result::ok)
-            .filter(|file: &DirEntry| !file.file_type().is_dir())
-            .map(|file: DirEntry|
-                ClassMapping::parse(File::open(file.into_path()).expect("Could not open file"))
-            ).collect()
-    }
-
-
-}

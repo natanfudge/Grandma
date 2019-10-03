@@ -1,6 +1,7 @@
-*
+/*
+/*/
 !.gitignore
-!src
+!/src/
 !Cargo.lock
 !Cargo.toml
 !LICENSE

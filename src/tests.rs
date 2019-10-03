@@ -10,7 +10,7 @@ fn test_read_write() {
     let original = "Block.mapping";
     let new = "Block_new.mapping";
     let mappings = ClassMapping::parse(
-        get_test_resource(original));
+        get_test_resource(original).as_ref());
     mappings.write(File::create(new).unwrap());
     assert_eq!(get_test_resource(original).read_contents(), read_to_string(new).unwrap());
 }

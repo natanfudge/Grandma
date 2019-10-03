@@ -3,6 +3,7 @@ use std::io::{prelude::*, BufReader};
 use crate::util::HasFirst;
 use crate::util::IterableExt;
 use crate::mappings::{ClassMapping, MethodMapping, ArgumentMapping, FieldMapping};
+use std::path::Path;
 
 trait Mapping {
     fn name_obf(&self) -> String;
@@ -10,8 +11,8 @@ trait Mapping {
 }
 
 impl ClassMapping {
-    pub fn parse(from : File) -> ClassMapping{
-        let reader = BufReader::new(from);
+    pub fn parse<P:AsRef<Path>>(from : P) -> ClassMapping{
+        let reader = BufReader::new(File::open(from).expect("Invalid path for mappings"));
 
         let mut current_indent_level: i32;
 

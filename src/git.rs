@@ -1,4 +1,4 @@
-use git2::{Repository, Oid, Commit, Signature, Direction, PushOptions, RemoteCallbacks, Cred};
+use git2::{Repository, Oid, Commit, Signature, Direction, PushOptions, RemoteCallbacks, Cred, BranchType};
 use git2::build::CheckoutBuilder;
 use std::path::{Path, PathBuf};
 use crate::util::get_resource;
@@ -32,8 +32,17 @@ fn create_callbacks<'a>() -> RemoteCallbacks<'a> {
 
 impl GitExt for Repository {
     fn create_branch_if_missing(&self, branch_name: &str) {
-        let commit = self.get_head_commit();
-        self.branch(branch_name, &commit, false);
+        // First try to use a remote branch
+        let tracked_branch = self.find_branch(fs!("origin/{}",branch_name), BranchType::Remote);
+        if let Ok(tracked_branch) = tracked_branch {
+            let tip = self.find_commit(tracked_branch.get().target().unwrap()).unwrap();
+            self.branch(branch_name, &tip, false);
+        } else {
+            // If there is no remote branch make a local one
+            let commit = self.get_head_commit();
+            self.branch(branch_name, &commit, false);
+        }
+
     }
     fn switch_to_branch(&self, branch_name: &str) {
         let mut checkout = CheckoutBuilder::new();
@@ -119,7 +128,7 @@ impl YarnRepo {
         get_resource(YARN_MAPPINGS_DIR)
     }
 
-    pub fn get_path(relative_path : &str) -> PathBuf{
+    pub fn get_path<P : AsRef<Path>>(relative_path : P) -> PathBuf{
         get_resource(LOCAL_YARN_REPO).join(relative_path)
     }
 

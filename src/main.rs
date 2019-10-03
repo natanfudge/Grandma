@@ -4,7 +4,7 @@ use crate::mappings::ClassMapping;
 use crate::util::{get_test_resource, get_resource, VecExt, ReadContentsExt};
 use std::fs::{read_dir, File, remove_file};
 use walkdir::{WalkDir, DirEntry};
-use git2::{Repository, Oid, Tree, Commit, Index, Signature, Direction, PushOptions, ProxyOptions, RemoteCallbacks, Cred};
+use git2::{Repository, Oid, Tree, Commit, Index, Signature, Direction, PushOptions, ProxyOptions, RemoteCallbacks, Cred, BranchType};
 use git2::build::CheckoutBuilder;
 use crate::git::{GitExt, YarnRepo};
 use std::path::{PathBuf, Path};
@@ -38,6 +38,7 @@ mod pr_response;
 mod github;
 mod git;
 mod bot;
+mod query;
 
 //TODO: plan:
 // - Maintain a singular git repository that exists in github.com at all times.
@@ -60,6 +61,7 @@ mod bot;
 //   - The author can be "anonymous".
 //   - The pull request will provide a detailed list of changes in the body in an easy-to-read format,
 //     together with the explanations provided during renaming.
+//   - The master branch gets updated manually every so often.
 
 
 //TODO: Version 2:
@@ -73,11 +75,33 @@ mod bot;
 //TODO: test that branches are preserved between different deploys (deletions of the repo)
 
 
-
 fn main() -> Result<(), git2::Error> {
     println!("Program started!");
     println!("Cloning yarn...");
     let repo = YarnRepo::clone_yarn();
+
+//    let remote = repo.find_remote("origin").unwrap();
+//    let refspecs = remote.fetch_refspecs().unwrap();
+//    for refspec in refspecs.iter() {
+//        println!("refspec = {:?}", refspec);
+//    }
+//
+//    let local_branch_name = "Fudge9736";
+//    let tracked_branch_name = "origin/Fudge9736";
+//    let tracked_branch = repo.find_branch(tracked_branch_name, BranchType::Remote);
+//    if let Ok(tracked_branch) = tracked_branch {
+//        let tip = repo.find_commit(tracked_branch.get().target().unwrap()).unwrap();
+//        let branch = repo.branch(local_branch_name, &tip, false).unwrap();
+//
+//    } else {
+//        println!("Could not find remote branch")
+//    }
+//
+
+//    repo.create_branch_if_missing(branch_name);
+//    repo.switch_to_branch("Fudge9736");
+//    repo.remote
+//    remote.
 
     println!("Starting bot");
     start_bot();

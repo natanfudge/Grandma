@@ -27,10 +27,9 @@ impl<W: Write> NewLineWriter for LineWriter<W> {
 }
 
 #[allow(dead_code)]
-pub fn get_test_resource(name: &str) -> File {
+pub fn get_test_resource(name: &str) -> PathBuf {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let path = dir.join("resources").join("test").join(name);
-    File::open(path).unwrap_or_else(|_| panic!("Could not find test resource {}", name))
+   dir.join("resources").join("test").join(name)
 }
 
 pub fn get_resource(name: &str) -> PathBuf {
