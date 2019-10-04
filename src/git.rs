@@ -16,7 +16,7 @@ pub trait GitExt {
     fn create_branch_if_missing(&self, branch_name: &str);
     fn switch_to_branch(&self, branch_name: &str);
     fn get_head_commit(&self) -> Commit;
-    fn stage_changes(&self, changed_file: &Path);
+    fn stage_changes<P : AsRef<Path>>(&self, changed_file: P);
     fn commit_changes(&self, author_name: &str, author_email: &str, message: &str) -> Oid;
     fn push(&self, branch: &str) -> Result<(), git2::Error>;
     fn remove(&self, path :&Path);
@@ -56,9 +56,9 @@ impl GitExt for Repository {
         self.find_commit(self.refname_to_id("HEAD").unwrap()).unwrap()
     }
 
-    fn stage_changes(&self, changed_file: &Path) {
+    fn stage_changes<P : AsRef<Path>>(&self, changed_file: P) {
         let mut index = self.index().expect("Could not find git index");
-        index.add_path(changed_file).expect("Could not add file to git");
+        index.add_path(changed_file.as_ref()).expect("Could not add file to git");
         index.write().expect("Could not write index changes to disk");
     }
 

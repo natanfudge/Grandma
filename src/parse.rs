@@ -27,8 +27,8 @@ impl ClassMapping {
             match line[0] {
                 "CLASS" => {
                     let current_class = ClassMapping {
-                        name_obf: line[1].to_string(),
-                        name_deobf: (if line.len() >= 3 { line[2] } else { "" }).to_string(),
+                        obf_name: line[1].to_string(),
+                        deobf_name: (if line.len() >= 3 { line[2] } else { "" }).to_string(),
                         methods: vec![],
                         fields: vec![],
                         inner_classes: vec![],
@@ -57,8 +57,8 @@ impl ClassMapping {
 fn add_method(current_indent_level: i32, mut top_level_class: &mut ClassMapping, line: Vec<&str>) {
     let mapping_exists = line[2].first() != '(';
     let current_method = MethodMapping {
-        name_obf: line[1].to_string(),
-        name_deobf: (if mapping_exists { line[2] } else { "" }).to_string(),
+        obf_name: line[1].to_string(),
+        deobf_name: (if mapping_exists { line[2] } else { "" }).to_string(),
         descriptor: (if mapping_exists { line[3] } else { line[2] }).to_string(),
         args: Vec::new(),
     };
@@ -86,8 +86,8 @@ fn add_argument(indent_level: i32, top_level_class: &mut ClassMapping, parts: Ve
 
 fn add_field(indent_level: i32, top_level_class: &mut ClassMapping, parts: Vec<&str>) {
     let current_field = FieldMapping {
-        name_obf: parts[1].to_string(),
-        name_deobf: parts[2].to_string(),
+        obf_name: parts[1].to_string(),
+        deobf_name: parts[2].to_string(),
         descriptor: parts[3].to_string(),
     };
     get_class_in(indent_level - 1, top_level_class).fields.push(current_field);

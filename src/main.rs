@@ -50,6 +50,7 @@ mod query;
 //   - The full rename and the explanation will be repeated by the bot,
 //     or a [no explanation] will be shown if there is no explanation.
 //   - Explanation will be stored in a file in the branch and deleted when the pull request is made.
+//   - The input will be validated.
 // - When a person wishes to submit his renames, he must specify a name for the mappings set,
 //   and an author in the form of a github link,
 //   and a new branch will be created with the changes he has made, named with the name of the mappings set.
@@ -70,7 +71,6 @@ mod query;
 // This will be stored in a database and they will be given full credit for commits made in their name.
 // - Branches will be stored in a database with the date they were last modified.
 //    - Whenever a change is made, the bot will check if it conflicts with any branches that have recent changes (a week or so)
-
 
 //TODO: test that branches are preserved between different deploys (deletions of the repo)
 

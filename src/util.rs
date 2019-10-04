@@ -61,20 +61,30 @@ impl<I: Iterator> IterableExt<I::Item> for I {
 
 //TOOD: expand to iterable that returns the type of self
 pub trait VecExt<E> {
-    fn map<R, F>(self, mapping: F) -> Vec<R> where F: Fn(E) -> R;
+    fn map_into<R, F>(self, mapping: F) -> Vec<R> where F: Fn(E) -> R;
+    fn map<R, F>(&self, mapping: F) -> Vec<R> where F: Fn(&E) -> R;
     fn filter<F>(self, predicate: F) -> Vec<E> where F: Fn(&E) -> bool;
+    fn find<F>(self, predicate : F) -> Option<E> where F : FnMut(&E) -> bool;
 
     //    fn map_mut<'a, R, F>(&'a mut self, mapping: F) -> Vec<&'a mut R> where F: Fn(&mut E) -> R;
     fn filter_mut<F>(&mut self, predicate: F) -> Vec<&mut E> where F: Fn(&&mut E) -> bool;
 }
 
 impl<E> VecExt<E> for Vec<E> {
-    fn map<R, F>(self, mapping: F) -> Vec<R> where F: FnMut(E) -> R {
+    fn map_into<R, F>(self, mapping: F) -> Vec<R> where F: FnMut(E) -> R {
         self.into_iter().map(mapping).collect()
+    }
+
+    fn map<R, F>(&self, mapping: F) -> Vec<R> where F: Fn(&E) -> R {
+        self.iter().map(mapping).collect()
     }
 
     fn filter<F>(self, predicate: F) -> Vec<E> where F: Fn(&E) -> bool {
         self.into_iter().filter(predicate).collect()
+    }
+
+    fn find<F>(self, predicate : F) -> Option<E> where F : FnMut(&E) -> bool{
+        self.into_iter().find(predicate)
     }
 
 //    fn map_mut<'a, R, F>(&'a mut self, mapping: F) -> Vec<&'a mut R> where F: Fn(&mut E) -> R{
