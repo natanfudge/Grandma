@@ -109,6 +109,7 @@ impl ClassRename {
         let mapping_name = split.last().unwrap_or(&"");
 
         if let Some(package) = &self.old_name.package {
+            println!("Checking package {}",package);
             let mapping_package: String = split[..split.len() - 1].join("/");
             return mapping_name.to_string() == self.old_name.class_name
                 && mapping_package.ends_with(package);
@@ -181,9 +182,13 @@ impl Rename for ClassRename {
         let to_rename = self.find(mapping)
             .expect("When renaming a class it is expected for the searched class to be known to exist in the file");
 
-        let human_old_name = format!("{}/{}", old_package, self.human_readable_old_name());
+        let human_old_name = if old_package != "" {
+            format!("{}/{}", old_package, self.human_readable_old_name())
+        }else {self.human_readable_old_name()};
         let new_name = self.new_name.join();
-        let human_new_name = format!("{}/{}",new_package,self.human_readable_new_name());
+        let human_new_name = if new_package != "" {
+            format!("{}/{}", new_package, self.human_readable_new_name())
+        }else {self.human_readable_new_name()};
 
         to_rename.deobf_name = new_name;
 

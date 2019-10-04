@@ -80,29 +80,6 @@ fn main() -> Result<(), git2::Error> {
     println!("Cloning yarn...");
     let repo = YarnRepo::clone_yarn();
 
-//    let remote = repo.find_remote("origin").unwrap();
-//    let refspecs = remote.fetch_refspecs().unwrap();
-//    for refspec in refspecs.iter() {
-//        println!("refspec = {:?}", refspec);
-//    }
-//
-//    let local_branch_name = "Fudge9736";
-//    let tracked_branch_name = "origin/Fudge9736";
-//    let tracked_branch = repo.find_branch(tracked_branch_name, BranchType::Remote);
-//    if let Ok(tracked_branch) = tracked_branch {
-//        let tip = repo.find_commit(tracked_branch.get().target().unwrap()).unwrap();
-//        let branch = repo.branch(local_branch_name, &tip, false).unwrap();
-//
-//    } else {
-//        println!("Could not find remote branch")
-//    }
-//
-
-//    repo.create_branch_if_missing(branch_name);
-//    repo.switch_to_branch("Fudge9736");
-//    repo.remote
-//    remote.
-
     println!("Starting bot");
     start_bot();
 

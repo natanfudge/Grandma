@@ -6,7 +6,7 @@ use serenity::{
 use serenity::model::id::ChannelId;
 use crate::mappings::{ClassMapping, Mapping};
 use crate::util::{VecExt, get_resource};
-use std::fs::{File, remove_file};
+use std::fs::{File, remove_file, create_dir_all};
 use serenity::model::user::User;
 use git2::Repository;
 use crate::git::{YarnRepo, GitExt, GIT_EMAIL, GIT_USER, YARN_MAPPINGS_DIR, RELATIVE_MAPPINGS_DIR};
@@ -104,6 +104,7 @@ pub fn start_bot() {
 //TODO: rename methods(class#method), rename inner classes (class$class), rename fields (class#field),
 // rename parameters (class#method[index]), name things that are not named yet
 
+//TODO: implement this properly
 fn parse_rename(old_name: &str, new_name: &str, search_obf: bool) -> Box<dyn Rename> {
     return Box::new(
         ClassRename {
@@ -126,9 +127,9 @@ impl CommandContext {
 }
 
 
-fn human_class_path(mappings_root : PathBuf, class_path : PathBuf) -> String{
+fn human_class_path(class_path: PathBuf) -> String {
     let diff = pathdiff::diff_paths(class_path.as_ref(),
-                                    mappings_root.as_ref()).unwrap();
+                                    YarnRepo::get_mappings_directory().as_ref()).unwrap();
     let string = diff.to_str().unwrap();
     string[..string.len() - MAPPING_EXT_LENGTH].to_string()
 }
@@ -147,16 +148,17 @@ fn try_rename(old_name: &str, new_name: &str, search_obf: bool, context: &Comman
     let mappings = YarnRepo::find(&renamer);
 
     if mappings.is_empty() {
-        context.send(fs!("No class named '{}'.",old_name));
+        if search_obf {
+            context.send(fs!("No intermediary class name '{}' or the class has been already named.",old_name));
+        } else {
+            context.send(fs!("No class named '{}'.",old_name));
+        }
     } else if mappings.len() == 1 {
-        rename(renamer, &mappings[0], context,&repo)
+        rename(renamer, &mappings[0], context, &repo)
     } else {
-//        let diff: PathBuf;
         let matching_class_names = mappings
             .map_into(move |path| {
-                human_class_path(get_resource(YARN_MAPPINGS_DIR), path)
-//               let  diff = ;
-//                diff.to_str().unwrap()
+                human_class_path( path)
             }
             )
             .join(",\n");
@@ -167,7 +169,8 @@ Prefix the **original** class name with its enclosing package name followed by a
     };
 }
 
-fn rename(renamer: Box<dyn Rename>, mappings: &Path, context: &CommandContext, repo : &Repository) {
+// Stop from renaming to something that already exists
+fn rename(renamer: Box<dyn Rename>, mappings: &Path, context: &CommandContext, repo: &Repository) {
     let mut mapping = ClassMapping::parse(mappings);
 
     let rename_result = renamer.rename(&mut mapping);
@@ -177,34 +180,40 @@ fn rename(renamer: Box<dyn Rename>, mappings: &Path, context: &CommandContext, r
 
     let old_path = YarnRepo::get_path(mappings);
     let new_path = YarnRepo::get_path(&new_mappings_location);
-    println!("new location = {}, new path = {:?}", new_mappings_location,new_path);
+    if let Err(error) = create_dir_all(new_path.parent().unwrap()) {
+        println!("Could not create directories for path {:?} : {:?}", new_path, error);
+    }
 
-    if let Ok(new_mappings_file) = File::create(&new_path) {
-        // Remove old file
+    match File::create(&new_path) {
+        Ok(new_mappings_file) => {
+            // Remove old file
 
-        if let Err(_error) = remove_file(&old_path) {
-            println!("Could not delete old mappings file at {:?}",old_path);
-        }
+            if let Err(error) = remove_file(&old_path) {
+                println!("Could not delete old mappings file at {:?} : {:?}", old_path, error);
+            }
 
-        //TODO: don't do this when the file name does not change.
-        repo.remove(old_path.as_ref());
+            //TODO: don't do this when the file name does not change.
+            println!("Removing path = {:?}", old_path);
+            if let Err(error) = repo.remove(YarnRepo::relative_path(&old_path)){
+                println!("Could not remove file '{:?}' from git: {:?}", old_path,error);
+            }
 
-        context.send(fs!("Renamed {} to {}.", human_old_name,human_new_name));
+            context.send(fs!("Renamed {} to {}.", human_old_name,human_new_name));
 
-        mapping.write(new_mappings_file);
-        repo.stage_changes(new_mappings_location);
-        repo.commit_changes(GIT_USER, GIT_EMAIL, fs!("{} -> {}",
+            mapping.write(new_mappings_file);
+            repo.stage_changes(new_mappings_location);
+            repo.commit_changes(GIT_USER, GIT_EMAIL, fs!("{} -> {}",
         human_old_name,human_new_name));
 
-        let result = repo.push(user_branch_name(&context.message.author).as_str());
-        if let Err(error) = result {
-            context.send(fs!("There was a problem while pushing the changes to github: {:?}",error));
-        } else {
-            println!("Changes pushed to repository");
+            let result = repo.push(user_branch_name(&context.message.author).as_str());
+            if let Err(error) = result {
+                context.send(fs!("There was a problem while pushing the changes to github: {:?}",error));
+            } else {
+                println!("Changes pushed to repository");
+            }
         }
-    } else {
-        context.send(fs!("Could not save mappings to {:?}.",new_mappings_location));
-    }
+        Err(error) => context.send(fs!("Could not save mappings to {:?} : {:?}",new_mappings_location,error))
+    };
 }
 
 fn user_branch_name(user: &User) -> String {

@@ -3,23 +3,24 @@ use git2::build::CheckoutBuilder;
 use std::path::{Path, PathBuf};
 use crate::util::get_resource;
 use std::str::FromStr;
+use path_slash::PathExt;
 
 const ORIGIN_YARN_REPO: &str = "https://github.com/natanfudge/yarn";
 const LOCAL_YARN_REPO: &str = "yarn";
 pub const YARN_MAPPINGS_DIR: &str = "yarn/mappings";
 pub const RELATIVE_MAPPINGS_DIR: &str = "mappings";
 
-pub const GIT_USER  :&str = "natanfudge";
-pub const GIT_EMAIL  :&str = "natan.lifsiz@gmail.com";
+pub const GIT_USER: &str = "natanfudge";
+pub const GIT_EMAIL: &str = "natan.lifsiz@gmail.com";
 
 pub trait GitExt {
     fn create_branch_if_missing(&self, branch_name: &str);
     fn switch_to_branch(&self, branch_name: &str);
     fn get_head_commit(&self) -> Commit;
-    fn stage_changes<P : AsRef<Path>>(&self, changed_file: P);
+    fn stage_changes<P: AsRef<Path>>(&self, changed_file: P);
     fn commit_changes(&self, author_name: &str, author_email: &str, message: &str) -> Oid;
     fn push(&self, branch: &str) -> Result<(), git2::Error>;
-    fn remove(&self, path :&Path);
+    fn remove<P : AsRef<Path>>(&self, path: P) -> Result<(), git2::Error> ;
 }
 
 fn create_callbacks<'a>() -> RemoteCallbacks<'a> {
@@ -42,7 +43,6 @@ impl GitExt for Repository {
             let commit = self.get_head_commit();
             self.branch(branch_name, &commit, false);
         }
-
     }
     fn switch_to_branch(&self, branch_name: &str) {
         let mut checkout = CheckoutBuilder::new();
@@ -56,7 +56,7 @@ impl GitExt for Repository {
         self.find_commit(self.refname_to_id("HEAD").unwrap()).unwrap()
     }
 
-    fn stage_changes<P : AsRef<Path>>(&self, changed_file: P) {
+    fn stage_changes<P: AsRef<Path>>(&self, changed_file: P) {
         let mut index = self.index().expect("Could not find git index");
         index.add_path(changed_file.as_ref()).expect("Could not add file to git");
         index.write().expect("Could not write index changes to disk");
@@ -82,7 +82,7 @@ impl GitExt for Repository {
         let mut remote = self.find_remote("origin").unwrap();
 
         remote.connect_auth(Direction::Push, Some(create_callbacks()), None)?;
-        let refspec_str = format!("+refs/heads/{}:refs/heads/{}",branch,branch);
+        let refspec_str = format!("+refs/heads/{}:refs/heads/{}", branch, branch);
         self.remote_add_push("origin", refspec_str.as_str())?;
         let mut push_options = PushOptions::default();
         let callbacks = create_callbacks();
@@ -95,13 +95,13 @@ impl GitExt for Repository {
         Ok(())
     }
 
-    fn remove(&self, path :&Path){
+    fn remove<P : AsRef<Path>>(&self, path: P) -> Result<(), git2::Error> {
         let mut index = self.index().unwrap();
-        index.remove_path(path);
-        index.write();
+        index.remove_path(path.as_ref().to_slash().unwrap().as_ref())?;
+        index.write()?;
+        Ok(())
     }
 }
-
 
 
 pub struct YarnRepo;
@@ -128,11 +128,15 @@ impl YarnRepo {
         get_resource(YARN_MAPPINGS_DIR)
     }
 
-    pub fn get_path<P : AsRef<Path>>(relative_path : P) -> PathBuf{
+    pub fn get_path<P: AsRef<Path>>(relative_path: P) -> PathBuf {
         get_resource(LOCAL_YARN_REPO).join(relative_path)
     }
 
-    pub fn get_path_from_mappings(relative_path : &str) -> PathBuf{
-        YarnRepo::get_mappings_directory().join(relative_path)
+//    pub fn get_path_from_mappings(relative_path: &str) -> PathBuf {
+//        YarnRepo::get_mappings_directory().join(relative_path)
+//    }
+
+    pub fn relative_path<P : AsRef<Path>>(absolute_path : P) -> PathBuf{
+        pathdiff::diff_paths(absolute_path.as_ref(), get_resource(LOCAL_YARN_REPO).as_ref()).unwrap()
     }
 }
