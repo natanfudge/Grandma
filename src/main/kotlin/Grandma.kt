@@ -38,11 +38,15 @@ private val BotToken = System.getenv("DISCORD_TOKEN")
 
 //TODO: test that branches are preserved between different deploys (deletions of the repo)
 
+
 suspend fun main() {
     bot(BotToken) {
         commands("") {
             command("ping") {
-                reply("pong")
+                reply("Pong")
+            }
+            command("rename") {
+                MessageContext(this, this@bot).acceptRaw(KeyWord.Rename, content)
             }
         }
     }
