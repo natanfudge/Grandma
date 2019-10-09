@@ -1,0 +1,11 @@
+CLASS bgq net/minecraft/block/AbstractBannerBlock
+	CLASS testObf testDeobf
+		FIELD a b c
+		METHOD d e f
+			ARG 1 g
+	CLASS a b
+		METHOD a b c
+	CLASS testMissing
+	FIELD a color Lawa;
+	METHOD b getColor ()Lawa;
+	METHOD obf descriptor

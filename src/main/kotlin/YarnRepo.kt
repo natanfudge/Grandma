@@ -21,6 +21,10 @@ object YarnRepo {
 
     fun getGit(): Git = Git.open(LocalPath)
 
-    fun getFile(path : String): File = LocalPath.toPath().resolve(path).toFile()
+    fun getFile(path: String): File = LocalPath.toPath().resolve(path).toFile()
+
+    fun walkMappingsDirectory(): FileTreeWalk = MappingsDirectory.walk()
+
+    fun mappingsPathOf(path : File) = path.relativeTo(MappingsDirectory)
 }
 
