@@ -12,25 +12,25 @@ data class ClassMapping(
     var methods: MutableList<MethodMapping>,
     var fields: MutableList<FieldMapping>,
     var innerClasses: MutableList<ClassMapping>
-) : Mapping
+) : Mapping()
 
 data class MethodMapping(
     override var obfuscatedName: String, override var deobfuscatedName: String?,
     override var descriptor: String, var parameters: MutableList<ParameterMapping>
-) : Mapping, Descriptored
+) : Mapping(), Descriptored
 
 data class FieldMapping(
     override var obfuscatedName: String, override var deobfuscatedName: String,
     override var descriptor: String
-) : Mapping, Descriptored
+) : Mapping(), Descriptored
 
-data class ParameterMapping(var index: Int, override var deobfuscatedName: String) : Mapping {
+data class ParameterMapping(var index: Int, override var deobfuscatedName: String) : Mapping() {
     override val obfuscatedName = ""
 }
 
-interface Mapping {
-    val obfuscatedName: String
-    val deobfuscatedName: String?
+sealed class Mapping {
+    abstract val obfuscatedName: String
+    abstract val deobfuscatedName: String?
 }
 
 interface Descriptored {

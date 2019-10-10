@@ -1,6 +1,8 @@
 import com.jessecorbett.diskord.api.model.Message
 import com.jessecorbett.diskord.util.EnhancedEventListener
 import com.jessecorbett.diskord.util.authorId
+import enigma.MappingsFile
+import enigma.read
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.eclipse.jgit.api.Git
@@ -78,7 +80,7 @@ fun MessageContext.acceptRaw(keyWord: KeyWord, message: String) {
     }
 
     when (val result = parseRename(keyWord, oldName, newName, explanation)) {
-        is RenameParseResult.Success -> tryRename(result.parsed)
+        is RenameParseResult.Success -> tryRename(result.parsed,oldName)
         is RenameParseResult.Error -> result.error
     }
 
@@ -105,28 +107,29 @@ private fun parseRename(
     )
 }
 
-/** Optimization to avoid parsing all of the files */
-private fun Rename.matchesFileName(nameWithoutExt: String): Boolean {
-    return oldTopLevelClassName == nameWithoutExt
-}
 
-private val Rename.oldTopLevelClassName get() = originalName.name.topLevelClassName
+//private fun Rename.matchesFileName(nameWithoutExt: String): Boolean {
+//    return oldTopLevelClassName == nameWithoutExt
+//}
+
+//private val Rename.oldTopLevelClassName get() = originalName.name.topLevelClassName
 
 
-private fun MessageContext.tryRename(rename: Rename) {
+private fun MessageContext.tryRename(rename: Rename, oldNameInputString : String) {
     val repo = YarnRepo.getGit()
     println("Switching to branch $branchNameOfSender")
     repo.switchToBranch(branchNameOfSender)
 
     val matchingMappingsFiles = YarnRepo.walkMappingsDirectory()
-        .filter { rename.matchesFileName(it.name.removeSuffix(".mapping")) }
+        .filter { rename.matchesFileName(it.name.removeSuffix(".mapping"),it.parent)
+                && rename.canRename(MappingsFile.read(it)) }
         .toList()
 
     when {
         matchingMappingsFiles.isEmpty() -> {
             return reply(
-                if (rename is Rename.ByDeobfuscatedName) "No class named '${rename.oldTopLevelClassName}'"
-                else "No intermediary class name '${rename.oldTopLevelClassName}' or the class has already been named"
+                if (rename is Rename.ByDeobfuscatedName) "No class named '$oldNameInputString'"
+                else "No intermediary class name '$oldNameInputString' or the class has already been named"
             )
         }
         matchingMappingsFiles.size > 1 -> {

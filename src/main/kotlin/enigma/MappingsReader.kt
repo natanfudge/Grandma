@@ -2,8 +2,6 @@ package enigma
 
 import put
 import java.io.File
-import java.nio.file.Files
-
 
 
 fun MappingsFile.Companion.read(file: File): MappingsFile {
