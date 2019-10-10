@@ -1,6 +1,7 @@
 import com.jessecorbett.diskord.dsl.bot
 import com.jessecorbett.diskord.dsl.command
 import com.jessecorbett.diskord.dsl.commands
+import java.lang.RuntimeException
 
 private val BotToken = System.getenv("DISCORD_TOKEN")
 
@@ -40,13 +41,25 @@ private val BotToken = System.getenv("DISCORD_TOKEN")
 
 
 suspend fun main() {
+    println("Program started!")
     bot(BotToken) {
+        started {
+            println("Bot connected!")
+        }
         commands("") {
             command("ping") {
                 reply("Pong")
             }
             command("rename") {
-                MessageContext(this, this@bot).acceptRaw(KeyWord.Rename, content)
+                //TODO: exceptions are being silenced
+                throw RuntimeException("test")
+                try {
+                    MessageContext(this, this@bot).acceptRaw(KeyWord.Rename, content)
+                } catch (e: Exception) {
+                    reply("Something bad happened.")
+                    throw e
+                }
+
             }
         }
     }

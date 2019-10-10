@@ -57,7 +57,10 @@ object UserInput {
 
 
 fun MessageContext.acceptRaw(keyWord: KeyWord, message: String) {
-    val sentence = message.split(" ")
+    val sentence = message.split(" ").toMutableList()
+    // Remove the command prefix
+    sentence.removeAt(0)
+
     UserInput.checkForError(keyWord, sentence)?.let { return reply(it) }
 
     val oldName = sentence[0]
@@ -167,5 +170,8 @@ private fun <M : Mapping> MessageContext.rename(rename: Rename<M>, renameTarget:
     reply("Renamed '$oldName' to '$newName'!")
 
     MappingsFile(renameTarget.root).writeTo(YarnRepo.getMappingsFile(newPath))
+    repo.stageChanges(newPath)
+    repo.commit(author = YarnRepo.TemporaryAuthor,commitMessage = "$oldName -> $newName")
+    YarnRepo.push(repo)
 
 }

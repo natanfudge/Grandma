@@ -13,6 +13,14 @@ class InputTests {
     }
 
     @Test
+    fun `Correct rename input is met with no error`() {
+        val correctRenames = listOf("x to y","x to y because a b c")
+        for (rename in correctRenames) {
+            assertEquals(UserInput.checkForError(KeyWord.Rename, rename.split(" ")), null)
+        }
+    }
+
+    @Test
     fun `Incorrect name input is met with an error`() {
         val incorrectNames = listOf(
             "x", "x y:", "x y z"
