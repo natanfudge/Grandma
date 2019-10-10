@@ -1,6 +1,7 @@
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 import java.io.File
+import java.nio.file.Paths
 
 object YarnRepo {
     private const val RemoteUrl = "https://github.com/natanfudge/yarn"
@@ -25,6 +26,12 @@ object YarnRepo {
 
     fun walkMappingsDirectory(): FileTreeWalk = MappingsDirectory.walk()
 
-    fun mappingsPathOf(path : File) = path.relativeTo(MappingsDirectory)
+//    fun mappingsPathOf(path : File) = path.relativeTo(MappingsDirectory)
+
+    fun pathOfMappingFromGitRoot(relativeMappingPath: String): String {
+        return Paths.get(MappingsDirName, relativeMappingPath).toString()
+    }
+
+    fun getMappingsFile(path: String): File = MappingsDirectory.toPath().resolve(path).toFile()
 }
 

@@ -1,12 +1,10 @@
 import com.jessecorbett.diskord.api.model.Message
 import com.jessecorbett.diskord.util.EnhancedEventListener
 import com.jessecorbett.diskord.util.authorId
-import enigma.MappingsFile
-import enigma.read
+import enigma.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.eclipse.jgit.api.Git
-import java.io.File
 
 data class MessageContext(val message: Message, private val eventListener: EnhancedEventListener) {
     fun reply(content: String) {
@@ -80,14 +78,14 @@ fun MessageContext.acceptRaw(keyWord: KeyWord, message: String) {
     }
 
     when (val result = parseRename(keyWord, oldName, newName, explanation)) {
-        is RenameParseResult.Success -> tryRename(result.parsed,oldName)
+        is RenameParseResult.Success -> tryRename(result.parsed, oldName)
         is RenameParseResult.Error -> result.error
     }
 
 }
 
 sealed class RenameParseResult {
-    data class Success(val parsed: Rename) : RenameParseResult()
+    data class Success(val parsed: Rename<*>) : RenameParseResult()
     data class Error(val error: String) : RenameParseResult()
 }
 
@@ -99,44 +97,52 @@ private fun parseRename(
     explanation: String?
 ): RenameParseResult {
     return RenameParseResult.Success(
-        Rename.ByDeobfuscatedName(
+        Rename(
             originalName = OriginalName.Short(ClassName(oldName, innerClass = null)),
             explanation = explanation,
-            newName = NewName.ClassNameChange(ClassName(newName, innerClass = null))
+            newName = ClassName(newName, innerClass = null),
+            byObfuscated = false
         )
     )
 }
 
+fun Mapping.type(): String = when (this) {
+    is ClassMapping -> "class"
+    is MethodMapping -> "method"
+    is FieldMapping -> "field"
+    is ParameterMapping -> "parameter"
+}
 
-//private fun Rename.matchesFileName(nameWithoutExt: String): Boolean {
-//    return oldTopLevelClassName == nameWithoutExt
-//}
+fun Mapping.typePlural(): String = when (this) {
+    is ClassMapping -> "classes"
+    is MethodMapping -> "methods"
+    is FieldMapping -> "fields"
+    is ParameterMapping -> "parameters"
+}
 
-//private val Rename.oldTopLevelClassName get() = originalName.name.topLevelClassName
-
-
-private fun MessageContext.tryRename(rename: Rename, oldNameInputString : String) {
+private fun <M : Mapping> MessageContext.tryRename(rename: Rename<M>, oldNameInputString: String) {
     val repo = YarnRepo.getGit()
     println("Switching to branch $branchNameOfSender")
     repo.switchToBranch(branchNameOfSender)
 
     val matchingMappingsFiles = YarnRepo.walkMappingsDirectory()
-        .filter { rename.matchesFileName(it.name.removeSuffix(".mapping"),it.parent)
-                && rename.canRename(MappingsFile.read(it)) }
+        .mapNotNull { rename.findRenameTarget(it) }
         .toList()
 
     when {
         matchingMappingsFiles.isEmpty() -> {
             return reply(
-                if (rename is Rename.ByDeobfuscatedName) "No class named '$oldNameInputString'"
+                if (rename.byObfuscated) "No class named '$oldNameInputString'"
                 else "No intermediary class name '$oldNameInputString' or the class has already been named"
             )
         }
         matchingMappingsFiles.size > 1 -> {
-            val options = matchingMappingsFiles.joinToString("\n") { YarnRepo.mappingsPathOf(it).absolutePath }
+            val typePlural = matchingMappingsFiles[0].typePlural()
+            val type = matchingMappingsFiles[0].type()
+            val options = matchingMappingsFiles.joinToString("\n") { it.humanReadableName(rename.byObfuscated) }
             return reply(
-                "There are multiple classes with this name: \n$options\n" +
-                        "Prefix the **original** class name with its enclosing package name followed by a '/'."
+                "There are multiple $typePlural with this name: \n$options\n" +
+                        "Prefix the **original** $type name with its enclosing package name followed by a '/'."
             )
         }
         else -> {
@@ -145,7 +151,21 @@ private fun MessageContext.tryRename(rename: Rename, oldNameInputString : String
     }
 
 }
+val Mapping.filePath get() = root.deobfuscatedName ?: root.obfuscatedName
 
-private fun MessageContext.rename(rename: Rename, mappingsFile: File, repo: Git) {
+private fun <M : Mapping> MessageContext.rename(rename: Rename<M>, renameTarget: M, repo: Git) {
+    val oldPath = renameTarget.filePath
+    val oldName = renameTarget.humanReadableName(rename.byObfuscated)
+    rename.rename(renameTarget)
+    val newPath = renameTarget.filePath
+    val newName = renameTarget.humanReadableName(rename.byObfuscated)
+
+    if(oldPath != newPath){
+        repo.remove(YarnRepo.pathOfMappingFromGitRoot(oldPath))
+    }
+
+    reply("Renamed '$oldName' to '$newName'!")
+
+    MappingsFile(renameTarget.root).writeTo(YarnRepo.getMappingsFile(newPath))
 
 }
