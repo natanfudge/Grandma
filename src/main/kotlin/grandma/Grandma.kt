@@ -1,7 +1,8 @@
+package grandma
+
 import com.jessecorbett.diskord.dsl.bot
 import com.jessecorbett.diskord.dsl.command
 import com.jessecorbett.diskord.dsl.commands
-import java.lang.RuntimeException
 
 private val BotToken = System.getenv("DISCORD_TOKEN")
 
@@ -42,6 +43,9 @@ private val BotToken = System.getenv("DISCORD_TOKEN")
 
 suspend fun main() {
     println("Program started!")
+    println("Cloning yarn...")
+    YarnRepo.getOrClone()
+    println("Starting bot...")
     bot(BotToken) {
         started {
             println("Bot connected!")
@@ -51,15 +55,14 @@ suspend fun main() {
                 reply("Pong")
             }
             command("rename") {
-                //TODO: exceptions are being silenced
-                throw RuntimeException("test")
                 try {
-                    MessageContext(this, this@bot).acceptRaw(KeyWord.Rename, content)
+                    profile("Processed input") {
+                        MessageContext(this, this@bot).acceptRaw(KeyWord.Rename, content)
+                    }
                 } catch (e: Exception) {
                     reply("Something bad happened.")
-                    throw e
+                    e.printStackTrace()
                 }
-
             }
         }
     }

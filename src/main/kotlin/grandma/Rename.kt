@@ -1,4 +1,6 @@
-import enigma.*
+package grandma
+
+import grandma.enigma.*
 import java.io.File
 
 data class RenameResult(val fullOldName: String, val fullNewName: String)
@@ -7,6 +9,7 @@ data class RenameResult(val fullOldName: String, val fullNewName: String)
 data class Rename<M : Mapping>(
     private val originalName: OriginalName<M>,
     private val newName: Name<M>,
+    private val newPackageName: String?,
     private val explanation: String?,
     val byObfuscated: Boolean
 ) {
@@ -23,10 +26,12 @@ data class Rename<M : Mapping>(
 //    fun matchesFileName(nameWithoutExtension: String, directory: String): Boolean {
 //        return originalName.matchesFileName(nameWithoutExtension, directory)
 //    }
-    //TODO: handle moving the full package seperately
 
 
-    fun rename(mappings: M) = newName.rename(mappings, byObfuscated)
+    fun rename(mappings: M) = newName.rename(mappings)
+    fun renameAndChangePackage(mappings: ClassMapping) {
+        TODO()
+    }
 
 }
 
@@ -34,7 +39,7 @@ data class Rename<M : Mapping>(
 /**
  *  Code duplication here because using the same class for both makes it confusing during renaming - the subclasses exist
  *  for completely different reason.
- *  In the OriginalName you can qualify to resolve ambiguities, and in NewName you can qualify to change the package.
+ *  In the grandma.OriginalName you can qualify to resolve ambiguities, and in NewName you can qualify to change the package.
  */
 sealed class OriginalName<M : Mapping> {
     abstract fun matchesFileName(file: File): Boolean
@@ -67,7 +72,7 @@ sealed class Name<M : Mapping> {
     abstract val topLevelClassName: String
     abstract fun findRenameTarget(mappings: MappingsFile, byObfuscated: Boolean): M?
 
-    abstract fun rename(mappings: M, byObfuscated: Boolean)
+    abstract fun rename(mappings: M)
 }
 
 
@@ -91,9 +96,17 @@ data class ClassName(val topLevelName: String, val innerClass: ClassName?) : Nam
         }
     }
 
+    //TODO: hook up
+    fun renameAndChangePackage(mappings: ClassMapping, newPackageName: String) {
+        mappings.deobfuscatedName = "$newPackageName/$topLevelName"
+    }
 
-    override fun rename(mappings: ClassMapping, byObfuscated: Boolean) {
-        mappings.deobfuscatedName = topLevelName
+
+    override fun rename(mappings: ClassMapping) {
+        val packageName = (mappings.deobfuscatedName ?: mappings.obfuscatedName).split("/")
+            .let { it.subList(0, it.size - 1).joinToString("/") }
+
+        mappings.deobfuscatedName = "$packageName/$topLevelName"
     }
 }
 
@@ -104,7 +117,7 @@ data class FieldName(val fieldName: String, val classIn: ClassName) : Name<Field
         TODO("not implemented")
     }
 
-    override fun rename(mappings: FieldMapping, byObfuscated: Boolean) {
+    override fun rename(mappings: FieldMapping) {
         TODO("not implemented")
     }
 
@@ -118,7 +131,7 @@ data class MethodName(val methodName: String, val classIn: ClassName, val parame
         TODO("not implemented")
     }
 
-    override fun rename(mappings: MethodMapping, byObfuscated: Boolean) {
+    override fun rename(mappings: MethodMapping) {
         TODO("not implemented")
     }
 
@@ -127,7 +140,7 @@ data class MethodName(val methodName: String, val classIn: ClassName, val parame
 
 sealed class ParameterName(methodIn: MethodName) : Name<ParameterMapping>() {
     override val topLevelClassName = methodIn.topLevelClassName
-    override fun rename(mappings: ParameterMapping, byObfuscated: Boolean) {
+    override fun rename(mappings: ParameterMapping) {
         TODO("not implemented")
     }
 

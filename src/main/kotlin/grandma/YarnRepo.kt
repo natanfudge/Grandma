@@ -1,3 +1,5 @@
+package grandma
+
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.PersonIdent
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
@@ -30,7 +32,7 @@ object YarnRepo {
 
 
     fun pathOfMappingFromGitRoot(relativeMappingPath: String): String {
-        return Paths.get(MappingsDirName, relativeMappingPath).toString()
+        return Paths.get(MappingsDirName, relativeMappingPath).toString().replace("\\","/")
     }
 
     fun getMappingsFile(path: String): File = MappingsDirectory.toPath().resolve(path).toFile()

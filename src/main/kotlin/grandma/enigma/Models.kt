@@ -1,4 +1,4 @@
-package enigma
+package grandma.enigma
 
 
 data class MappingsFile(val topLevelClass: ClassMapping) {
@@ -18,6 +18,7 @@ data class ClassMapping(
         val humanReadableName = name(obfuscated) ?: "<un-named>"
         return if (parent == null) humanReadableName else parent.humanReadableName(obfuscated) + "$" + humanReadableName
     }
+    override fun toString() = humanReadableName(false)
 
     override val root : ClassMapping = parent?.root ?: this
 }
@@ -31,6 +32,7 @@ data class MethodMapping(
     val parent: ClassMapping
 ) : Mapping(), Descriptored {
     override fun humanReadableName(obfuscated: Boolean) = parent.humanReadableName(obfuscated) + "#" + name(obfuscated)
+    override fun toString() = humanReadableName(false)
     override val root = parent.root
 }
 
@@ -39,6 +41,7 @@ data class FieldMapping(
     override var descriptor: String, /*override*/ val parent: ClassMapping
 ) : Mapping(), Descriptored {
     override fun humanReadableName(obfuscated: Boolean) = parent.humanReadableName(obfuscated) + "#" + name(obfuscated)
+    override fun toString() = humanReadableName(false)
     override val root = parent.root
 }
 
@@ -48,6 +51,7 @@ data class ParameterMapping(
 ) : Mapping() {
     override val obfuscatedName = ""
     override fun humanReadableName(obfuscated: Boolean) = parent.humanReadableName(obfuscated) + "[${name(obfuscated)}]"
+    override fun toString() = humanReadableName(false)
     override val root = parent.root
 }
 

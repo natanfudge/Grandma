@@ -1,4 +1,4 @@
-import enigma.*
+import grandma.enigma.*
 import org.junit.Test
 import kotlin.test.assertEquals
 

@@ -1,6 +1,6 @@
 @file:Suppress("NOTHING_TO_INLINE")
 
-package enigma
+package grandma.enigma
 
 import java.io.BufferedWriter
 import java.io.File
