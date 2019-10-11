@@ -1,4 +1,5 @@
 package grandma
+
 import com.jessecorbett.diskord.api.model.Message
 import com.jessecorbett.diskord.util.EnhancedEventListener
 import com.jessecorbett.diskord.util.authorId
@@ -6,7 +7,6 @@ import grandma.enigma.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.eclipse.jgit.api.Git
-import java.util.stream.Stream
 
 data class MessageContext(val message: Message, private val eventListener: EnhancedEventListener) {
     fun reply(content: String) {
@@ -83,34 +83,14 @@ fun MessageContext.acceptRaw(keyWord: KeyWord, message: String) {
     }
 
     when (val result = parseRename(keyWord, oldName, newName, explanation)) {
-        is RenameParseResult.Success -> tryRename(result.parsed, oldName)
-        is RenameParseResult.Error -> result.error
+        is StringSuccess -> tryRename(result.value, oldName)
+        is StringError -> result.value
     }
 
 }
 
-sealed class RenameParseResult {
-    data class Success(val parsed: Rename<*>) : RenameParseResult()
-    data class Error(val error: String) : RenameParseResult()
-}
 
 
-private fun parseRename(
-    keyWord: KeyWord,
-    oldName: String,
-    newName: String,
-    explanation: String?
-): RenameParseResult {
-    return RenameParseResult.Success(
-        Rename(
-            originalName = OriginalName.Short(ClassName(oldName, innerClass = null)),
-            explanation = explanation,
-            newName = ClassName(newName, innerClass = null),
-            byObfuscated = false,
-            newPackageName = null
-        )
-    )
-}
 
 fun Mapping.type(): String = when (this) {
     is ClassMapping -> "class"
@@ -134,8 +114,8 @@ private fun <M : Mapping> MessageContext.tryRename(rename: Rename<M>, oldNameInp
 
 
     val matchingMappingsFiles = YarnRepo.walkMappingsDirectory()
-            .mapNotNull { rename.findRenameTarget(it) }
-            .toList()
+        .mapNotNull { rename.findRenameTarget(it) }
+        .toList()
 
     when {
         matchingMappingsFiles.isEmpty() -> {

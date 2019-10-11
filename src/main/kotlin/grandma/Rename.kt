@@ -3,8 +3,6 @@ package grandma
 import grandma.enigma.*
 import java.io.File
 
-data class RenameResult(val fullOldName: String, val fullNewName: String)
-
 
 data class Rename<M : Mapping>(
     private val originalName: OriginalName<M>,
@@ -13,24 +11,21 @@ data class Rename<M : Mapping>(
     private val explanation: String?,
     val byObfuscated: Boolean
 ) {
-//    fun canRename(mappings: MappingsFile): Boolean {
-//        return originalName.existsIn(mappings, byObfuscated)
-//    }
-
     fun findRenameTarget(file: File): M? {
         if (!originalName.matchesFileName(file)) return null
         return originalName.findRenameTarget(MappingsFile.read(file), byObfuscated)
     }
 
-//    /** Optimization to avoid parsing all of the files */
-//    fun matchesFileName(nameWithoutExtension: String, directory: String): Boolean {
-//        return originalName.matchesFileName(nameWithoutExtension, directory)
-//    }
+    fun rename(mappings: M) {
+        if (newPackageName != null) {
+            // Changing the package can only be done on top-level classes
+            newName as ClassName
+            mappings as ClassMapping
+            newName.renameAndChangePackage(mappings, newPackageName)
+        } else {
+            newName.rename(mappings)
+        }
 
-
-    fun rename(mappings: M) = newName.rename(mappings)
-    fun renameAndChangePackage(mappings: ClassMapping) {
-        TODO()
     }
 
 }
@@ -57,6 +52,9 @@ sealed class OriginalName<M : Mapping> {
 
     data class Qualified<M : Mapping>(val unqualifiedName: Short<M>, val partialPackage: String) : OriginalName<M>() {
         override fun matchesFileName(file: File): Boolean {
+            // Subtle difference between 'endsWith(partialPackage)' and  == 'file.nameWithoutExtension',
+            // the former will allow not matching entirely (only the end),
+            // and the latter will force the class name to completely match.
             return unqualifiedName.matchesFileName(file) && file.parent.endsWith(partialPackage)
         }
 
@@ -72,10 +70,19 @@ sealed class Name<M : Mapping> {
     abstract val topLevelClassName: String
     abstract fun findRenameTarget(mappings: MappingsFile, byObfuscated: Boolean): M?
 
-    abstract fun rename(mappings: M)
+    abstract fun rename(mapping: M)
 }
 
+//TODO: test list:
+// Disambiguation by specifying package
+// Full package rename of class
+// Rename of class
+// Rename of inner class
+// Rename of field
+// Rename of method
+// Rename of parameter
 
+//TODO: maybe change to classIn for consistency?
 data class ClassName(val topLevelName: String, val innerClass: ClassName?) : Name<ClassMapping>() {
     override val topLevelClassName = topLevelName
     override fun findRenameTarget(mappings: MappingsFile, byObfuscated: Boolean): ClassMapping? {
@@ -83,7 +90,7 @@ data class ClassName(val topLevelName: String, val innerClass: ClassName?) : Nam
     }
 
     private fun findRenameTarget(mappings: ClassMapping, byObfuscated: Boolean): ClassMapping? {
-        val targetName = (if (byObfuscated) mappings.obfuscatedName else mappings.deobfuscatedName) ?: return null
+        val targetName = mappings.name(byObfuscated) ?: return null
         if (targetName.split("/").last() != topLevelName) return null
         if (innerClass != null) {
             for (innerClassMapping in mappings.innerClasses) {
@@ -96,17 +103,16 @@ data class ClassName(val topLevelName: String, val innerClass: ClassName?) : Nam
         }
     }
 
-    //TODO: hook up
     fun renameAndChangePackage(mappings: ClassMapping, newPackageName: String) {
         mappings.deobfuscatedName = "$newPackageName/$topLevelName"
     }
 
 
-    override fun rename(mappings: ClassMapping) {
-        val packageName = (mappings.deobfuscatedName ?: mappings.obfuscatedName).split("/")
+    override fun rename(mapping: ClassMapping) {
+        val packageName = (mapping.deobfuscatedName ?: mapping.obfuscatedName).split("/")
             .let { it.subList(0, it.size - 1).joinToString("/") }
 
-        mappings.deobfuscatedName = "$packageName/$topLevelName"
+        mapping.deobfuscatedName = "$packageName/$topLevelName"
     }
 }
 
@@ -114,11 +120,12 @@ data class ClassName(val topLevelName: String, val innerClass: ClassName?) : Nam
 data class FieldName(val fieldName: String, val classIn: ClassName) : Name<FieldMapping>() {
     override val topLevelClassName = classIn.topLevelClassName
     override fun findRenameTarget(mappings: MappingsFile, byObfuscated: Boolean): FieldMapping? {
-        TODO("not implemented")
+        return classIn.findRenameTarget(mappings, byObfuscated)?.fields
+            ?.find { it.name(byObfuscated) == fieldName }
     }
 
-    override fun rename(mappings: FieldMapping) {
-        TODO("not implemented")
+    override fun rename(mapping: FieldMapping) {
+        mapping.deobfuscatedName = fieldName
     }
 
 
@@ -128,11 +135,17 @@ data class MethodName(val methodName: String, val classIn: ClassName, val parame
     Name<MethodMapping>() {
     override val topLevelClassName = classIn.topLevelClassName
     override fun findRenameTarget(mappings: MappingsFile, byObfuscated: Boolean): MethodMapping? {
-        TODO("not implemented")
+        val targetClass = classIn.findRenameTarget(mappings, byObfuscated) ?: return null
+
+        // User can disambiguate with descriptor (user inputs something human readable, what is stored is not readable)
+        if (parameterTypes != null) {
+            TODO("Implement descriptor parser")
+        }
+        return targetClass.methods.find { it.name(byObfuscated) == methodName }
     }
 
-    override fun rename(mappings: MethodMapping) {
-        TODO("not implemented")
+    override fun rename(mapping: MethodMapping) {
+        mapping.deobfuscatedName = methodName
     }
 
 
@@ -140,19 +153,38 @@ data class MethodName(val methodName: String, val classIn: ClassName, val parame
 
 sealed class ParameterName(methodIn: MethodName) : Name<ParameterMapping>() {
     override val topLevelClassName = methodIn.topLevelClassName
-    override fun rename(mappings: ParameterMapping) {
-        TODO("not implemented")
-    }
+
 
     data class ByIndex(val index: Int, val method: MethodName) : ParameterName(method) {
         override fun findRenameTarget(mappings: MappingsFile, byObfuscated: Boolean): ParameterMapping? {
-            TODO("not implemented")
+            val targetMethod = method.findRenameTarget(mappings, byObfuscated) ?: return null
+            targetMethod.parameters.find { it.index == index }?.let { return it }
+
+            //TODO: uncomment once we have descriptor parser
+            /*val parameterAmount =2 *//*Find method amount from descriptor *//*
+            return if(parameterAmount >= index){
+                // Since the enigma format emits unnamed parameters, we will add the unnamed parameter ourselves
+                // so we can rename it in the rename method
+                val fabricatedParameter = ParameterMapping(index, deobfuscatedName = "", parent = targetMethod)
+                targetMethod.parameters.add(fabricatedParameter)
+                fabricatedParameter
+            }else null*/
+
+            return null
+        }
+
+        override fun rename(mapping: ParameterMapping) {
+            error("Cannot rename by index (this should be validated before we get here)")
         }
     }
 
     data class ByName(val name: String, val method: MethodName) : ParameterName(method) {
         override fun findRenameTarget(mappings: MappingsFile, byObfuscated: Boolean): ParameterMapping? {
-            TODO("not implemented")
+            return method.findRenameTarget(mappings, byObfuscated)?.parameters?.find { it.name(byObfuscated) == name }
+        }
+
+        override fun rename(mapping: ParameterMapping) {
+            mapping.deobfuscatedName = name
         }
     }
 }

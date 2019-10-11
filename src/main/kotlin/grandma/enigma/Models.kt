@@ -1,5 +1,8 @@
 package grandma.enigma
 
+import java.lang.reflect.Parameter
+
+
 
 data class MappingsFile(val topLevelClass: ClassMapping) {
     // To be able to extend
@@ -40,7 +43,7 @@ data class FieldMapping(
     override var obfuscatedName: String, override var deobfuscatedName: String,
     override var descriptor: String, /*override*/ val parent: ClassMapping
 ) : Mapping(), Descriptored {
-    override fun humanReadableName(obfuscated: Boolean) = parent.humanReadableName(obfuscated) + "#" + name(obfuscated)
+    override fun humanReadableName(obfuscated: Boolean) = parent.humanReadableName(obfuscated) + "F" + name(obfuscated)
     override fun toString() = humanReadableName(false)
     override val root = parent.root
 }
@@ -50,7 +53,7 @@ data class ParameterMapping(
     /*override*/ val parent: MethodMapping
 ) : Mapping() {
     override val obfuscatedName = ""
-    override fun humanReadableName(obfuscated: Boolean) = parent.humanReadableName(obfuscated) + "[${name(obfuscated)}]"
+    override fun humanReadableName(obfuscated: Boolean) = parent.humanReadableName(obfuscated) + "[param $index = ${name(obfuscated)}]"
     override fun toString() = humanReadableName(false)
     override val root = parent.root
 }
