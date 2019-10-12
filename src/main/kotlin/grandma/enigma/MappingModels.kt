@@ -1,5 +1,6 @@
 package grandma.enigma
 
+import grandma.Joiner
 import java.lang.reflect.Parameter
 
 
@@ -19,7 +20,8 @@ data class ClassMapping(
 ) : Mapping() {
     override fun humanReadableName(obfuscated: Boolean): String {
         val humanReadableName = name(obfuscated) ?: "<un-named>"
-        return if (parent == null) humanReadableName else parent.humanReadableName(obfuscated) + "$" + humanReadableName
+        return if (parent == null) humanReadableName else parent.humanReadableName(obfuscated) +
+                Joiner.InnerClass + humanReadableName
     }
     override fun toString() = humanReadableName(false)
 
@@ -31,29 +33,32 @@ data class MethodMapping(
     override var obfuscatedName: String,
     override var deobfuscatedName: String?,
     override var descriptor: String,
-    var parameters: MutableList<ParameterMapping>, /*override*/
+    var parameters: MutableList<ParameterMapping>,
     val parent: ClassMapping
 ) : Mapping(), Descriptored {
-    override fun humanReadableName(obfuscated: Boolean) = parent.humanReadableName(obfuscated) + "#" + name(obfuscated)
+    override fun humanReadableName(obfuscated: Boolean) = parent.humanReadableName(obfuscated) +
+            Joiner.Method + name(obfuscated)
     override fun toString() = humanReadableName(false)
     override val root = parent.root
 }
 
 data class FieldMapping(
     override var obfuscatedName: String, override var deobfuscatedName: String,
-    override var descriptor: String, /*override*/ val parent: ClassMapping
+    override var descriptor: String,  val parent: ClassMapping
 ) : Mapping(), Descriptored {
-    override fun humanReadableName(obfuscated: Boolean) = parent.humanReadableName(obfuscated) + "F" + name(obfuscated)
+    override fun humanReadableName(obfuscated: Boolean) = parent.humanReadableName(obfuscated) +
+            Joiner.Field + name(obfuscated)
     override fun toString() = humanReadableName(false)
     override val root = parent.root
 }
 
 data class ParameterMapping(
     var index: Int, override var deobfuscatedName: String,
-    /*override*/ val parent: MethodMapping
+     val parent: MethodMapping
 ) : Mapping() {
     override val obfuscatedName = ""
-    override fun humanReadableName(obfuscated: Boolean) = parent.humanReadableName(obfuscated) + "[param $index = ${name(obfuscated)}]"
+    override fun humanReadableName(obfuscated: Boolean) = parent.humanReadableName(obfuscated) +
+            "[param $index = ${name(obfuscated)}]"
     override fun toString() = humanReadableName(false)
     override val root = parent.root
 }
