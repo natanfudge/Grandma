@@ -5,7 +5,7 @@ import java.io.File
 
 
 data class Rename<M : Mapping>(
-    private val originalName: OriginalName<M>,
+     val originalName: OriginalName<M>,
     private val newName: String,
     private val newPackageName: String?,
     private val explanation: String?,
@@ -108,7 +108,7 @@ data class FieldName(val fieldName: String, val classIn: ClassName) : Name<Field
     }
 
     override fun rename(mapping: FieldMapping, newName: String) {
-        mapping.deobfuscatedName = fieldName
+        mapping.deobfuscatedName = newName
     }
 
 
@@ -167,7 +167,7 @@ sealed class ParameterName(methodIn: MethodName) : Name<ParameterMapping>() {
         }
 
         override fun rename(mapping: ParameterMapping, newName: String) {
-            mapping.deobfuscatedName = name
+            mapping.deobfuscatedName = newName
         }
     }
 }

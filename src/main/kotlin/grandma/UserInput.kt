@@ -59,7 +59,7 @@ object UserInput {
 
 
 fun MessageContext.acceptRaw(keyWord: KeyWord, message: String) {
-    val sentence = message.split(" ").toMutableList()
+    val sentence = message.split(" ").filter { it.isNotBlank() }.map { it.trim() }.toMutableList()
     // Remove the command prefix
     sentence.removeAt(0)
 
@@ -99,6 +99,13 @@ fun Mapping.type(): String = when (this) {
     is ParameterMapping -> "parameter"
 }
 
+fun Name<*>.type(): String = when (this) {
+    is ClassName -> "class"
+    is MethodName -> "method"
+    is FieldName -> "field"
+    is ParameterName -> "parameter"
+}
+
 fun Mapping.typePlural(): String = when (this) {
     is ClassMapping -> "classes"
     is MethodMapping -> "methods"
@@ -108,7 +115,7 @@ fun Mapping.typePlural(): String = when (this) {
 
 private fun <M : Mapping> MessageContext.tryRename(rename: Rename<M>, oldNameInputString: String) {
     val repo = YarnRepo.getGit()
-    profile("Switching to branch $branchNameOfSender") {
+    profile("Switched to branch $branchNameOfSender") {
         repo.switchToBranch(branchNameOfSender)
     }
 
@@ -120,9 +127,10 @@ private fun <M : Mapping> MessageContext.tryRename(rename: Rename<M>, oldNameInp
     when {
         matchingMappingsFiles.isEmpty() -> {
             return profile("replied") {
+                val type = rename.originalName.name.type()
                 reply(
-                    if (rename.byObfuscated) "No intermediary class name '$oldNameInputString' or the class has already been named."
-                    else "No class named '$oldNameInputString'."
+                    if (rename.byObfuscated) "No intermediary $type name '$oldNameInputString' or the $type has already been named."
+                    else "No $type named '$oldNameInputString'."
                 )
             }
         }
