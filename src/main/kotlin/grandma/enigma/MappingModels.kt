@@ -13,13 +13,13 @@ data class MappingsFile(val topLevelClass: ClassMapping) {
 data class ClassMapping(
     override var obfuscatedName: String,
     override var deobfuscatedName: String?,
-    var methods: MutableList<MethodMapping>,
-    var fields: MutableList<FieldMapping>,
-    var innerClasses: MutableList<ClassMapping>,
-    /*override*/ val parent: ClassMapping?
+    val methods: MutableList<MethodMapping>,
+    val fields: MutableList<FieldMapping>,
+    val innerClasses: MutableList<ClassMapping>,
+    override val parent: ClassMapping?
 ) : Mapping() {
     override fun humanReadableName(obfuscated: Boolean): String {
-        val humanReadableName = name(obfuscated) ?: "<un-named>"
+        val humanReadableName = nameOrObfuscated(obfuscated)
         return if (parent == null) humanReadableName else parent.humanReadableName(obfuscated) +
                 Joiner.InnerClass + humanReadableName
     }
@@ -34,31 +34,31 @@ data class MethodMapping(
     override var deobfuscatedName: String?,
     override var descriptor: String,
     var parameters: MutableList<ParameterMapping>,
-    val parent: ClassMapping
+    override val parent: ClassMapping
 ) : Mapping(), Descriptored {
     override fun humanReadableName(obfuscated: Boolean) = parent.humanReadableName(obfuscated) +
-            Joiner.Method + name(obfuscated)
+            Joiner.Method + nameOrObfuscated(obfuscated)
     override fun toString() = humanReadableName(false)
     override val root = parent.root
 }
 
 data class FieldMapping(
     override var obfuscatedName: String, override var deobfuscatedName: String,
-    override var descriptor: String,  val parent: ClassMapping
+    override var descriptor: String,override  val parent: ClassMapping
 ) : Mapping(), Descriptored {
     override fun humanReadableName(obfuscated: Boolean) = parent.humanReadableName(obfuscated) +
-            Joiner.Field + name(obfuscated)
+            Joiner.Field + nameOrObfuscated(obfuscated)
     override fun toString() = humanReadableName(false)
     override val root = parent.root
 }
 
 data class ParameterMapping(
     var index: Int, override var deobfuscatedName: String,
-     val parent: MethodMapping
+     override val parent: MethodMapping
 ) : Mapping() {
     override val obfuscatedName = ""
     override fun humanReadableName(obfuscated: Boolean) = parent.humanReadableName(obfuscated) +
-            "[param $index = ${name(obfuscated)}]"
+            "[param $index = ${nameOrObfuscated(obfuscated)}]"
     override fun toString() = humanReadableName(false)
     override val root = parent.root
 }
@@ -66,12 +66,16 @@ data class ParameterMapping(
 sealed class Mapping {
     abstract val obfuscatedName: String
     abstract val deobfuscatedName: String?
+    abstract val parent : Mapping?
 
     abstract fun humanReadableName(obfuscated: Boolean): String
     abstract val root : ClassMapping
 
+    fun nameOrObfuscated(obfuscated : Boolean) = if (obfuscated) obfuscatedName else nonNullName()
     fun name(obfuscated: Boolean) = if (obfuscated) obfuscatedName else deobfuscatedName
 }
+
+ fun Mapping.nonNullName() = deobfuscatedName ?: obfuscatedName
 
 interface Descriptored {
     val descriptor: String

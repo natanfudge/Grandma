@@ -4,8 +4,8 @@ package grandma
 
 import javax.lang.model.SourceVersion
 
-private val <T> T.success get() = StringSuccess(this)
-private fun <T> fail(error: String) = StringError<T>(error)
+val <T> T.success get() = StringSuccess(this)
+fun <T> fail(error: String) = StringError<T>(error)
 
 fun parseRename(
     keyWord: KeyWord,
@@ -15,10 +15,8 @@ fun parseRename(
 ): Errorable<Rename<*>> {
     val (oldNamePackage, oldName) = splitPackageAndName(rawOldName)
     val (newNamePackage, newName) = splitPackageAndName(rawNewName)
-    for (packageName in listOfNotNull(oldNamePackage, newNamePackage)) {
-        for (part in packageName.split("/")) {
-            if (!SourceVersion.isIdentifier(part)) return fail("'$part' is not a valid package name")
-        }
+    for (part in newNamePackage?.split("/") ?: listOf()) {
+        if (!SourceVersion.isIdentifier(part)) return fail("'$part' is not a valid package name")
     }
 
     if (!SourceVersion.isName(newName)) return fail("'$newName' is not a valid class name")
@@ -26,6 +24,11 @@ fun parseRename(
     val oldNameParsed = when (val oldNameParsedOrError = parseName(oldName)) {
         is StringSuccess -> oldNameParsedOrError.value
         is StringError -> return StringError(oldNameParsedOrError.value)
+    }
+
+    if((keyWord == KeyWord.Name || newNamePackage != null)
+        && oldNameParsed !is ClassName || (oldNameParsed is ClassName && oldNameParsed.innerClass != null)){
+        return fail("Changing the package name can only be done on top-level classes")
     }
 
     return Rename(
@@ -67,8 +70,9 @@ fun parseName(name: String): Errorable<out Name<*>> {
 private fun parseClass(name: String): Errorable<ClassName> {
     val splitIndex = name.indexOf(Joiner.InnerClass)
     if (splitIndex == -1) {
-        return if (!SourceVersion.isName(name)) fail("'$name' is not a valid class name")
-        else ClassName(name, innerClass = null).success
+        return ClassName(name, innerClass = null).success
+//        return if (!SourceVersion.isName(name)) fail("'$name' is not a valid class name")
+//        else ClassName(name, innerClass = null).success
     }
 
     val (outerClass, innerClass) = name.splitOn(splitIndex)
@@ -81,7 +85,7 @@ private fun parseMethod(name: String): Errorable<MethodName> {
     val splitIndex = name.lastIndexOf(Joiner.Method)
     if (splitIndex == -1) return fail("Expected '$name' to be a method")
     val (className, methodName) = name.splitOn(splitIndex)
-    if (!SourceVersion.isName(methodName)) return fail("'$methodName' is not a valid method name")
+//    if (!SourceVersion.isName(methodName)) return fail("'$methodName' is not a valid method name")
 
     //TODO: parse parameter types
     return parseClass(className).map { MethodName(methodName, it, null) }
@@ -91,7 +95,7 @@ private fun parseField(name: String): Errorable<FieldName> {
     val splitIndex = name.lastIndexOf(Joiner.Field)
     if (splitIndex == -1) return fail("Expected '$name' to be a field")
     val (className, fieldName) = name.splitOn(splitIndex)
-    if (!SourceVersion.isName(fieldName)) return fail("'$fieldName' is not a valid field name")
+//    if (!SourceVersion.isName(fieldName)) return fail("'$fieldName' is not a valid field name")
 
     return parseClass(className).map { FieldName(fieldName, it) }
 }
@@ -107,7 +111,7 @@ private fun parseParameter(name: String): Errorable<ParameterName> {
 
     val parameterName = parameterIndexOrName
 
-    if (!SourceVersion.isName(parameterName)) return fail("'$parameterName' is not a valid parameter name")
+//    if (!SourceVersion.isName(parameterName)) return fail("'$parameterName' is not a valid parameter name")
     return parseMethod(methodName).map { ParameterName.ByName(parameterName, it) }
 }
 

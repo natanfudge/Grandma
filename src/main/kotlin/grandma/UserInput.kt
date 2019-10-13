@@ -84,7 +84,7 @@ fun MessageContext.acceptRaw(keyWord: KeyWord, message: String) {
 
     when (val result = parseRename(keyWord, oldName, newName, explanation)) {
         is StringSuccess -> tryRename(result.value, oldName)
-        is StringError -> result.value
+        is StringError -> return reply(result.value)
     }
 
 }
@@ -154,15 +154,14 @@ val Mapping.filePath get() = (root.deobfuscatedName ?: root.obfuscatedName) + ".
 
 private fun <M : Mapping> MessageContext.rename(rename: Rename<M>, renameTarget: M, repo: Git) {
     val oldPath = renameTarget.filePath
-    val oldName = renameTarget.humanReadableName(rename.byObfuscated)
+    val oldName = renameTarget.humanReadableName(false)
     rename.rename(renameTarget)
     val newPath = renameTarget.filePath
-    val newName = renameTarget.humanReadableName(rename.byObfuscated)
+    val newName = renameTarget.humanReadableName(false)
 
     reply("Renamed $oldName to $newName")
 
     if (oldPath != newPath) {
-        repo.remove("mappings/net/minecraft/block/BambooSaplingBlock.mapping")
         repo.remove(YarnRepo.pathOfMappingFromGitRoot(oldPath))
     }
 

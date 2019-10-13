@@ -56,8 +56,18 @@ suspend fun main() {
             }
             command("rename") {
                 try {
-                    profile("Processed input") {
+                    profile("Processed rename") {
                         MessageContext(this, this@bot).acceptRaw(KeyWord.Rename, content)
+                    }
+                } catch (e: Exception) {
+                    reply("Something bad happened.")
+                    e.printStackTrace()
+                }
+            }
+            command("name"){
+                try {
+                    profile("Processed name") {
+                        MessageContext(this, this@bot).acceptRaw(KeyWord.Name, content)
                     }
                 } catch (e: Exception) {
                     reply("Something bad happened.")

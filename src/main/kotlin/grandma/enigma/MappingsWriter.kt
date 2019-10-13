@@ -6,6 +6,7 @@ import java.io.BufferedWriter
 import java.io.File
 
 fun MappingsFile.writeTo(file: File) {
+    file.parentFile.mkdirs()
     file.bufferedWriter().use {
         MappingsWriter(it).write(this)
     }
