@@ -1,3 +1,5 @@
+package util
+
 import grandma.Errorable
 import grandma.StringError
 import grandma.StringSuccess

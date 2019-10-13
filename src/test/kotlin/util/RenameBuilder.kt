@@ -1,12 +1,17 @@
+package util
+
 import grandma.*
 import grandma.ParameterName
 
 
 
 fun className(name: String, packageName: String? = null,
-              init: (ClassBuilder.() -> NameBuilder<*>)? = null) : RenameBuilder{
+              init: (ClassBuilder.() -> NameBuilder<*>)? = null) : RenameBuilder {
     val builder = ClassBuilder(listOf(name))
-    return RenameBuilder(if(init != null) builder.init().build() else builder.build(),packageName)
+    return RenameBuilder(
+        if (init != null) builder.init().build() else builder.build(),
+        packageName
+    )
 }
 
 class RenameBuilder(
@@ -47,7 +52,8 @@ class ClassBuilder(private val innerClasses: List<String>) : NameBuilder<ClassNa
 
 }
 
-class FieldBuilder(private val className: ClassName, private val field: String) : NameBuilder<FieldName> {
+class FieldBuilder(private val className: ClassName, private val field: String) :
+    NameBuilder<FieldName> {
     override fun build() = FieldName(field, className)
 }
 

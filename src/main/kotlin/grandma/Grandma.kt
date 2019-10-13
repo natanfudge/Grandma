@@ -29,10 +29,12 @@ private val BotToken = System.getenv("DISCORD_TOKEN")
 //   - The pull request will provide a detailed list of changes in the body in an easy-to-read format,
 //     together with the explanations provided during renaming.
 //   - The master branch gets updated manually every so often.
+// - 'Unnamed X in Y' command: list all unnamed classes/methods/fields/parameters
 
 
 //TODO: Version 2:
 // - Users may message the bot directly.
+// - "Stats" command - provide statistics on how much stuff is named
 // - Users may register their github name and email and bind it to their discord ID.
 // This will be stored in a database and they will be given full credit for commits made in their name.
 // - Branches will be stored in a database with the date they were last modified.

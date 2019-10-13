@@ -1,10 +1,10 @@
-package grandma.enigma
+package grandma.mappings
 
 import grandma.put
 import java.io.File
 
 
-fun MappingsFile.Companion.read(file: File): MappingsFile {
+fun MappingsFileCompanion.read(file: File): MappingsFile {
     val classesIn = mutableListOf<ClassMapping>()
     var methodIn: MethodMapping? = null
 
@@ -53,7 +53,7 @@ fun MappingsFile.Companion.read(file: File): MappingsFile {
     }
 
 
-    return MappingsFile(classesIn.getOrNull(0) ?: error("No class found in file"))
+    return classesIn.getOrNull(0) ?: error("No class found in file")
 }
 
 

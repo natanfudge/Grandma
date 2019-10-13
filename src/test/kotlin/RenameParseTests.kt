@@ -1,6 +1,8 @@
 import grandma.KeyWord
 import grandma.Rename
 import grandma.parseRename
+import util.assertSucceeds
+import util.className
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -100,7 +102,7 @@ class RenameParseTests {
 
     @Test
     fun `Complex rename is parsed correctly`(){
-        val expected = className("Block",packageName = "net/minecraft/blocks"){
+        val expected = className("Block", packageName = "net/minecraft/blocks") {
             innerClass("InnerBlock").innerClass("Innerer").method("Blockaside")
                 .parameter("f2f")
         }.renamedTo("f3f")

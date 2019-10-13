@@ -1,6 +1,6 @@
 package grandma
 
-import grandma.enigma.*
+import grandma.mappings.*
 import java.io.File
 
 
@@ -65,11 +65,11 @@ sealed class Name<M : Mapping> {
 
 data class ClassName(val topLevelName: String, val innerClass: ClassName?) : Name<ClassMapping>() {
     override val topLevelClassName = topLevelName
-    override fun findRenameTarget(mappings: MappingsFile, byObfuscated: Boolean): ClassMapping? {
-        return findRenameTarget(mappings.topLevelClass, byObfuscated)
-    }
+//    override fun findRenameTarget(mappings: MappingsFile, byObfuscated: Boolean): ClassMapping? {
+//        return findRenameTarget(mappings, byObfuscated)
+//    }
 
-    private fun findRenameTarget(mappings: ClassMapping, byObfuscated: Boolean): ClassMapping? {
+    override fun findRenameTarget(mappings: ClassMapping, byObfuscated: Boolean): ClassMapping? {
         val targetName = mappings.nameOrObfuscated(byObfuscated)
         if (targetName.split("/").last() != topLevelName) return null
         if (innerClass != null) {

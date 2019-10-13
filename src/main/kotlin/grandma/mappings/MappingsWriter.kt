@@ -1,6 +1,6 @@
 @file:Suppress("NOTHING_TO_INLINE")
 
-package grandma.enigma
+package grandma.mappings
 
 import java.io.BufferedWriter
 import java.io.File
@@ -28,7 +28,7 @@ object NaturalIndent {
 
 private class MappingsWriter(val writer: BufferedWriter) {
 
-    fun write(mappingsFile: MappingsFile) = mappingsFile.topLevelClass.write()
+    fun write(mappingsFile: MappingsFile) = mappingsFile.write()
 
     private fun ClassMapping.write(indent: Int = 0) {
         val classIndent = indent + NaturalIndent.Class

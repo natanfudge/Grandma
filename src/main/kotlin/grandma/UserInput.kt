@@ -3,7 +3,7 @@ package grandma
 import com.jessecorbett.diskord.api.model.Message
 import com.jessecorbett.diskord.util.EnhancedEventListener
 import com.jessecorbett.diskord.util.authorId
-import grandma.enigma.*
+import grandma.mappings.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.eclipse.jgit.api.Git
@@ -165,7 +165,7 @@ private fun <M : Mapping> MessageContext.rename(rename: Rename<M>, renameTarget:
         repo.remove(YarnRepo.pathOfMappingFromGitRoot(oldPath))
     }
 
-    MappingsFile(renameTarget.root).writeTo(YarnRepo.getMappingsFile(newPath))
+    renameTarget.root.writeTo(YarnRepo.getMappingsFile(newPath))
     repo.stageChanges(YarnRepo.pathOfMappingFromGitRoot(newPath))
     repo.commit(author = YarnRepo.TemporaryAuthor, commitMessage = "$oldName -> $newName")
     YarnRepo.push(repo)
