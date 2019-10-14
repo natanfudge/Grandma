@@ -1,24 +1,6 @@
 package grandma
 
-import com.jessecorbett.diskord.api.model.Message
-import com.jessecorbett.diskord.util.EnhancedEventListener
-import com.jessecorbett.diskord.util.authorId
 import grandma.mappings.*
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import org.eclipse.jgit.api.Git
-
-data class MessageContext(val message: Message, private val eventListener: EnhancedEventListener) {
-    fun reply(content: String) {
-        GlobalScope.launch {
-            with(eventListener) {
-                message.reply(content)
-            }
-        }
-    }
-
-    val branchNameOfSender = message.authorId
-}
 
 enum class KeyWord {
     Rename,
@@ -90,8 +72,6 @@ fun MessageContext.acceptRaw(keyWord: KeyWord, message: String) {
 }
 
 
-
-
 fun Mapping.type(): String = when (this) {
     is ClassMapping -> "class"
     is MethodMapping -> "method"
@@ -114,7 +94,7 @@ fun Mapping.typePlural(): String = when (this) {
 }
 
 private fun <M : Mapping> MessageContext.tryRename(rename: Rename<M>, oldNameInputString: String) {
-    val repo = YarnRepo.getGit()
+//    val repo = YarnRepo.getRawGit()
     profile("Switched to branch $branchNameOfSender") {
         repo.switchToBranch(branchNameOfSender)
     }
@@ -144,7 +124,7 @@ private fun <M : Mapping> MessageContext.tryRename(rename: Rename<M>, oldNameInp
             )
         }
         else -> {
-            rename(rename, matchingMappingsFiles[0], repo)
+            rename(rename, matchingMappingsFiles[0])
         }
     }
 
@@ -152,10 +132,13 @@ private fun <M : Mapping> MessageContext.tryRename(rename: Rename<M>, oldNameInp
 
 val Mapping.filePath get() = (root.deobfuscatedName ?: root.obfuscatedName) + ".mapping"
 
-private fun <M : Mapping> MessageContext.rename(rename: Rename<M>, renameTarget: M, repo: Git) {
+private fun <M : Mapping> MessageContext.rename(rename: Rename<M>, renameTarget: M) {
     val oldPath = renameTarget.filePath
     val oldName = renameTarget.humanReadableName(false)
-    rename.rename(renameTarget)
+    val result = rename.rename(renameTarget)
+    if (result is StringError) {
+        reply(result.value)
+    }
     val newPath = renameTarget.filePath
     val newName = renameTarget.humanReadableName(false)
 

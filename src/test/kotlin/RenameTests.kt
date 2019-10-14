@@ -5,5 +5,7 @@ class RenameTests {
         val rename = className("TestUnnamed").renamedTo("TestNamed")
         //TODO: Place mock files in resources folder, at the start copy to wanted location and then compare
         // to another mock file that is the expected outcome.
+
+        //TODO: mockk MessageContext?
     }
 }

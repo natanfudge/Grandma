@@ -40,13 +40,16 @@ private val BotToken = System.getenv("DISCORD_TOKEN")
 // - Branches will be stored in a database with the date they were last modified.
 //    - Whenever a change is made, the bot will check if it conflicts with any branches that have recent changes (a week or so)
 
-//TODO: test that branches are preserved between different deploys (deletions of the repo)
+
+//TODO: Write integrations tests for currently functionality -> Add Descriptor parser -> Add Descriptor parser tests
+// -> Remove byObfsucated/Name
+
 
 
 suspend fun main() {
     println("Program started!")
     println("Cloning yarn...")
-    YarnRepo.getOrClone()
+    YarnRepo.cloneIfMissing()
     println("Starting bot...")
     bot(BotToken) {
         started {
@@ -59,7 +62,7 @@ suspend fun main() {
             command("rename") {
                 try {
                     profile("Processed rename") {
-                        MessageContext(this, this@bot).acceptRaw(KeyWord.Rename, content)
+                        DiscordMessageContext(this, this@bot).acceptRaw(KeyWord.Rename, content)
                     }
                 } catch (e: Exception) {
                     reply("Something bad happened.")
@@ -69,7 +72,7 @@ suspend fun main() {
             command("name"){
                 try {
                     profile("Processed name") {
-                        MessageContext(this, this@bot).acceptRaw(KeyWord.Name, content)
+                        DiscordMessageContext(this, this@bot).acceptRaw(KeyWord.Name, content)
                     }
                 } catch (e: Exception) {
                     reply("Something bad happened.")

@@ -26,8 +26,8 @@ fun parseRename(
         is StringError -> return StringError(oldNameParsedOrError.value)
     }
 
-    if((keyWord == KeyWord.Name || newNamePackage != null)
-        && oldNameParsed !is ClassName || (oldNameParsed is ClassName && oldNameParsed.innerClass != null)){
+
+    if((keyWord == KeyWord.Name || newNamePackage != null) && (oldNameParsed !is ClassName || (oldNameParsed.innerClass != null))){
         return fail("Changing the package name can only be done on top-level classes")
     }
 

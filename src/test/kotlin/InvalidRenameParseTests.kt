@@ -14,15 +14,9 @@ class InvalidRenameParseTests {
 
 
     @Test
-    fun `Invalid old package name`() = assertInvalid("asd w/c","New")
-    @Test
     fun `Invalid new package name`() = assertInvalid("c","][]/New")
     @Test
-    fun `Invalid old class name`() = assertInvalid(" ","New")
-    @Test
-    fun `Invalid new class name`() = assertInvalid("Old","\\")
-    @Test
-    fun `Not class before field`() = assertInvalid("Old#method%field","New")
+    fun `Invalid new class name`() = assertInvalid("Old","/")
     @Test
     fun `Not method before parameter`() = assertInvalid("Old%method[2]","New")
 

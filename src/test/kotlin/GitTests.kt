@@ -1,5 +1,6 @@
 import grandma.*
 import org.junit.BeforeClass
+import util.getOrCloneGit
 import java.io.File
 import java.util.*
 import kotlin.test.Test
@@ -17,32 +18,32 @@ class GitTests {
 
     @Test
     fun `Can clone the yarn repository`() {
-        YarnRepo.getOrClone()
+        YarnRepo.cloneIfMissing()
         assert(YarnRepo.MappingsDirectory.exists())
     }
 
     @Test
     fun `Branches retain information`() {
-        YarnRepo.getOrClone().switchToBranch("secretInfo")
+        getOrCloneGit().switchToBranch("secretInfo")
         assert(YarnRepo.getFile("secretTestInfo").exists())
-        YarnRepo.getOrClone().switchToBranch("master")
-        YarnRepo.getOrClone().switchToBranch("secretInfo")
+        getOrCloneGit().switchToBranch("master")
+        getOrCloneGit().switchToBranch("secretInfo")
         assert(YarnRepo.getFile("secretTestInfo").exists())
-        YarnRepo.getOrClone().switchToBranch("secretInfo")
+        getOrCloneGit().switchToBranch("secretInfo")
         assert(YarnRepo.getFile("secretTestInfo").exists())
     }
 
     @Test
     fun `Can switch to non-existent branch`() {
-        val repo = YarnRepo.getOrClone()
+        val repo = getOrCloneGit()
         val branchName = "testBranch" + UUID.randomUUID()
         repo.switchToBranch(branchName)
-        assert(repo.branchList().call().any { it.name == "refs/heads/$branchName" })
+        assert(repo.getBranches().any { it.name == "refs/heads/$branchName" })
     }
 
     @Test
     fun `Can push changes to remote`() {
-        val repo = YarnRepo.getOrClone()
+        val repo = getOrCloneGit()
         repo.stageChanges("MAINTAINERS")
         repo.commit(author = YarnRepo.TemporaryAuthor, commitMessage = "Test Commit")
         YarnRepo.push(repo)
@@ -50,7 +51,7 @@ class GitTests {
 
     @Test
     fun `Git remove deletes file`() {
-        val repo = YarnRepo.getOrClone()
+        val repo = getOrCloneGit()
         repo.remove("mappings/afo.mapping")
         assert(!File("yarn/mappings/README.md").exists())
     }

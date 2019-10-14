@@ -1,8 +1,6 @@
 package util
 
-import grandma.Errorable
-import grandma.StringError
-import grandma.StringSuccess
+import grandma.*
 import java.io.File
 
 object TestUtil {
@@ -12,4 +10,9 @@ object TestUtil {
 inline fun <reified T> Errorable<T>.assertSucceeds(): T = when (this) {
     is StringSuccess -> this.value
     is StringError -> throw AssertionError("Expected success, but instead an error occurred: '${this.value}'")
+}
+
+fun getOrCloneGit() : GitRepository {
+    YarnRepo.cloneIfMissing()
+    return GitRepository(YarnRepo.getRawGit())
 }
